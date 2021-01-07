@@ -12,25 +12,6 @@ from sympy.utilities.lambdify import lambdify
 from scipy.optimize import root
 
 
-# In[ ]:
-
-
-def ReIm(z):
-    return (np.real(z), np.imag(z))
-
-
-# In[ ]:
-
-
-ReIm(np.array(0.4+0.2j))
-
-
-# In[ ]:
-
-
-ReIm(np.array([0.1+0.2j, 0.3+0.4j]))
-
-
 # Suppose we have a function $f(u,v) \rightarrow z$, which is expensive to evaluate.  We wish to find, $(u_t, v_t)$ such that $f(u_t, v_t) = z_t$.  We have evaluated this function to yield
 # $$
 # \begin{pmatrix}
