@@ -65,7 +65,7 @@ from colorize import colorizeComplexArray
 def plotComplexArray(array, maxRad=10):
     pixArray = colorizeComplexArray(array+0.00001j, centerColor='black', maxRad=maxRad)
     (h,w) = array.shape
-    np.empty_like(pixArray, dtype=np.uint32)
+    img = np.zeros((h,w), dtype=np.uint32)
     view = img.view(dtype=np.uint8).reshape(h,w,4)
     view[:,:,0] = pixArray[:,:,0]
     view[:,:,1] = pixArray[:,:,1]
@@ -148,19 +148,19 @@ dataSet = np.array([np.loadtxt(pathData(i+1), dtype=np.complex)
 # In[ ]:
 
 
-np.loadtxt(path)
-
-
-# In[ ]:
-
-
 np.max(abs(dataSet[0]))
 
 
 # In[ ]:
 
 
-plotComplexArray(dataSet[0], maxRad=10)
+dataSet[0]
+
+
+# In[ ]:
+
+
+plotComplexArray(dataSet[0], maxRad=6)
 
 
 # In[ ]:
@@ -179,6 +179,12 @@ plotComplexArray(golden, maxRad=10)
 
 
 deviations = dataSet - golden
+
+
+# In[ ]:
+
+
+plotComplexArray(deviations[4], maxRad=1)
 
 
 # In[ ]:
@@ -211,22 +217,28 @@ nCors = 2
 # In[ ]:
 
 
+((deviationsSTDFlat)[1:]).shape
+
+
+# In[ ]:
+
+
 pca = ComplexPCA(n_components=nCors)
-pca.fit(deviationsSTDFlat)
-pcaComps = pca.components_.reshape(nSamples,64,64)[:nCors]
+pca.fit(deviationsSTDFlat[1:])
+pcaComps = pca.components_.reshape(nSamples-1,64,64)[:nCors]
 basisRough = np.insert(pcaComps, 0, np.full_like(pcaComps[0], 1+0j), axis=0)
 
 
 # In[ ]:
 
 
-plotComplexArray(basisRough[1], maxRad=.1)
+plotComplexArray(basisRough[2], maxRad=.1)
 
 
 # In[ ]:
 
 
-deviceID = 4
+deviceID = 0
 device = dataSet[deviceID]
 
 
@@ -236,6 +248,7 @@ device = dataSet[deviceID]
 weights = np.linalg.lstsq(basisRough.reshape(len(basisRough),-1).T, 
                           (device-golden).flat, 
                           rcond=None)[0]
+weights
 
 
 # In[ ]:
@@ -260,10 +273,12 @@ np.max(np.abs(fit - device))
 
 
 errors = []
+weightsList = []
 for device in dataSet:
     weights = np.linalg.lstsq(basisRough.reshape(len(basisRough),-1).T, 
                           (device-golden).flat, 
                           rcond=None)[0]
+    weightsList.append(weights)
     fit = golden + (basisRough.T @ weights).reshape((64,64)).T
     aveLinError = np.average(np.abs(fit - device))
     errors.append(aveLinError)
@@ -273,7 +288,7 @@ errors
 # In[ ]:
 
 
-
+print(np.round(np.abs(weightsList),3))
 
 
 # In[ ]:
