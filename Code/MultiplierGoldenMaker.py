@@ -15,7 +15,14 @@ import os, sys
 
 
 import numpy as np
+import scipy as sp
 import itertools
+
+
+# In[ ]:
+
+
+import PIL
 
 
 # In[ ]:
@@ -175,78 +182,56 @@ golden = np.average(dataSet, axis=0)
 plotComplexArray(golden, maxRad=10)
 
 
-# In[ ]:
-
-
-deviations = dataSet - golden
-
+# ### PCA
 
 # In[ ]:
 
 
-plotComplexArray(deviations[4], maxRad=1)
-
-
-# In[ ]:
-
-
-deviationsSTD = np.zeros_like(deviations)
-for i, d in enumerate(deviations):
-    ave = np.average(d)
-    deviationsSTD[i] = d-ave
+trainingData = dataSet[0:-1]
+nSamples = len(trainingData)
 
 
 # In[ ]:
 
 
-plotComplexArray(deviationsSTD[4], maxRad=1)
+dataFlat = trainingData.reshape((len(trainingData), -1))
 
 
 # In[ ]:
 
 
-deviationsSTDFlat = deviationsSTD.reshape(5,-1)
-
-
-# In[ ]:
-
-
-nCors = 2
-
-
-# In[ ]:
-
-
-((deviationsSTDFlat)[1:]).shape
+nCors = 3
 
 
 # In[ ]:
 
 
 pca = ComplexPCA(n_components=nCors)
-pca.fit(deviationsSTDFlat[1:])
-pcaComps = pca.components_.reshape(nSamples-1,64,64)[:nCors]
-basisRough = np.insert(pcaComps, 0, np.full_like(pcaComps[0], 1+0j), axis=0)
+pca.fit(dataFlat)
+pcaComps = pca.components_.reshape(nSamples,64,64)[:nCors]
+constComp = np.full_like(pcaComps[0], 1+0j)
+basisRough = np.concatenate([ pcaComps, [constComp]])
+basis = np.array([b/np.average(np.abs(b)) for b in basisRough])
 
 
 # In[ ]:
 
 
-plotComplexArray(basisRough[2], maxRad=.1)
+plotComplexArray(basis[0], maxRad=4)
 
 
 # In[ ]:
 
 
-deviceID = 0
+deviceID = 4
 device = dataSet[deviceID]
 
 
 # In[ ]:
 
 
-weights = np.linalg.lstsq(basisRough.reshape(len(basisRough),-1).T, 
-                          (device-golden).flat, 
+weights = np.linalg.lstsq(basis.reshape(len(basis),-1).T, 
+                          device.flat, 
                           rcond=None)[0]
 weights
 
@@ -254,13 +239,19 @@ weights
 # In[ ]:
 
 
-fit = golden + (basisRough.T @ weights).reshape((64,64)).T
+fit = (basis.T @ weights).reshape((64,64)).T
 
 
 # In[ ]:
 
 
-plotComplexArray(fit - device, maxRad=0.05)
+plotComplexArray(fit, maxRad=6)
+
+
+# In[ ]:
+
+
+plotComplexArray(fit - device, maxRad=0.1)
 
 
 # In[ ]:
@@ -289,10 +280,4 @@ errors
 
 
 print(np.round(np.abs(weightsList),3))
-
-
-# In[ ]:
-
-
-
 
