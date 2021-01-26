@@ -65,12 +65,19 @@ colors = itertools.cycle(palette)
 import skrf as rf
 
 
+# In[ ]:
+
+
+from scipy.optimize import minimize
+
+
 # ### Custom Imports
 
 # In[ ]:
 
 
-from NetworkBuilding import (BuildMillerNetwork, MillerMultLocsX, 
+from NetworkBuilding import (BuildMillerNetwork,
+                             MillerMultLocsX, MillerCoupLocsX,
                              ConvertThetaPhiToTcX, Build3dBCoupler)
 
 
@@ -89,12 +96,14 @@ from Miller import (MillerBuilder)
 # In[ ]:
 
 
-from UtilityMath import (convertArrayToDict)
+from UtilityMath import (convertArrayToDict, MatrixError)
 
 
 # # Library
 
 # # Work
+
+# ## Ideal-ish elements
 
 # We begin by defining the kernel we want to emulate:
 
@@ -188,32 +197,13 @@ def AttBuilder(loc):
 MultBuilder(loc=("M", "Uh", 0, 0, 0))
 
 
-# To make things a little more interesting, we'll define two different CouplerBuilders.  The first makes use of an ideal coupler while the second make use of one determined through simulation of the components which includes parasitic losses, and was found to be fairly close to measured devices.
+# Finally we'll define a CouplerBuilder based on an ideal device.
 
 # In[ ]:
 
 
 def CouplerBuilderIdeal(loc):
     return Build3dBCoupler(freq45, loc=loc)
-
-
-# In[ ]:
-
-
-CouplerBuilderIdeal(("M", "Uh", 0, 0, 0)).s[0]
-
-
-# In[ ]:
-
-
-def CouplerBuilderSim(loc):
-    return Build3dBCouplerSim(freq45, loc=loc)
-
-
-# In[ ]:
-
-
-CouplerBuilderSim(("M", "Uh", 0, 0, 0)).s[0]
 
 
 # Finally, we assemble the simulation and determine that its behavior is pretty close to expected.  Deviations are likely due to the integer values used in the multiplier settings.
@@ -233,7 +223,24 @@ T
 np.abs(T-Ks)
 
 
-# And then we assembled a second simuation that utilizes the realistic 3dB couplers.  The deviations are much greater.
+# In[ ]:
+
+
+MatrixError(T, Ks)
+
+
+# ## Switch to Sim Couplers
+
+# On this round, let's define a Coupler Builder which makes use of one determined through simulation of the components which includes parasitic losses, and was found to be fairly close to measured devices.
+
+# In[ ]:
+
+
+def CouplerBuilderSim(loc):
+    return Build3dBCouplerSim(freq45, loc=loc)
+
+
+# And then we assembled a second simulation that utilizes the realistic 3dB couplers.  The deviations are much greater.
 
 # In[ ]:
 
@@ -249,6 +256,114 @@ T
 
 np.abs(T-Ks)
 
+
+# In[ ]:
+
+
+MatrixError(T, Ks)
+
+
+# ## Adjusting the Multipliers to account for the Couplers
+
+# There are multipliers which go to form MZIs and are trapped between two couplers.  We can generate a list of all such multipliers by messaging the list of all of the couplers.
+
+# In[ ]:
+
+
+allCouplers = MillerCoupLocsX(5, labels=('Uh', 'V'))
+allTrappedMults = []
+for loc in allCouplers:
+    locList = list(loc)
+    locList[0] = 'M'
+    allTrappedMults.append(tuple(locList))
+allTrappedMults;
+
+
+# Here is the ideal transmission of a 3dB Coupler.
+
+# In[ ]:
+
+
+TIdeal = CouplerBuilderIdeal(("M", "Uh", 0, 0, 0)).s[0, 2:, :2]
+TIdeal
+
+
+# Next is the simulated coupler.
+
+# In[ ]:
+
+
+TSim = CouplerBuilderSim(("M", "Uh", 0, 0, 0)).s[0, 2:, :2]
+TSim
+
+
+# In[ ]:
+
+
+MatrixError(TIdeal, TSim)
+
+
+# Next let's see if there is an adjustment factor that minimizes the distance between these two devices.
+
+# In[ ]:
+
+
+def fError(z):
+    zR, zI = z
+    error = MatrixError(TIdeal, (zR+1j*zI)*TSim)
+    return error
+
+
+# In[ ]:
+
+
+soln = minimize(fError, [1, 0])
+zr, zi = soln.x
+zAdjust = zr + 1j*zi
+zAdjust
+
+
+# In[ ]:
+
+
+MatrixError(TIdeal, TSim*zAdjust)
+
+
+# We can't apply an arbitary phase/amplitude shift to the couplers, but we can apply it to the local multipliers.  Since each stacked pair of multipliers are between two couplers, we need to apply the adjustment factor "twice", or in other words square it.  Not all multipliers are in MZIs and so we apply this only to the "trapped" mutlipliers.
+
+# In[ ]:
+
+
+for loc, Tc in TcDict.items():
+    mult = multBank.getMultByLoc(loc)
+    if loc in allTrappedMults:
+        mult.setT(zAdjust**2 * Tc)
+    else:
+        mult.setT(Tc)
+
+
+# In[ ]:
+
+
+millerNet3 = BuildMillerNetwork(CouplerBuilderSim, MultBuilder, 
+                               AttBuilder, n=5, labels=('Uh', 'S', 'V'))
+T = millerNet3.s[0, 5:, :5]
+T
+
+
+# In[ ]:
+
+
+np.abs(T-Ks)
+
+
+# In[ ]:
+
+
+MatrixError(T, Ks)
+
+
+# And we see that the error has come down, but not nearly to zero.
 
 # In[ ]:
 
