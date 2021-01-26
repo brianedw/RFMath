@@ -169,6 +169,77 @@ data = RandomComplexGaussianMatrix(10, (100,100))
 if mainQ: plotComplexArray(data, maxRad=3*10)
 
 
+# # Plot Complex Matrix Difference
+
+# In[ ]:
+
+
+def makePolarPlot(title):
+    '''
+    This will create a Bokeh plot that depicts the unit circle.
+
+    Requires import bokeh
+    '''
+    p = bokeh.plotting.figure(plot_width=400, plot_height=400, title=title, 
+                              x_range=[-1.1, 1.1], y_range=[-1.1, 1.1])
+    p.xaxis[0].ticker=bokeh.models.tickers.FixedTicker(ticks=np.arange(-1, 2, 0.25))
+    p.yaxis[0].ticker=bokeh.models.tickers.FixedTicker(ticks=np.arange(-1, 2, 0.25)) 
+    p.circle(x = [0,0,0,0], y = [0,0,0,0], radius = [0.25, 0.50, 0.75, 1.0], 
+             fill_color = None, line_color='gray')
+    p.line(x=[0,0], y=[-1,1], line_color='gray')
+    p.line(x=[-1,1], y=[0,0], line_color='gray')
+    xs = [0.25, 0.50, 0.75, 1.00]
+    ys = [0, 0, 0, 0]
+    texts = ['0.25', '0.50', '0.75', '1.00']
+    source = bokeh.models.ColumnDataSource(dict(x=xs, y=ys, text=texts))
+    textGlyph = bokeh.models.Text(x="x", y="y", text="text", angle=0.3, 
+                                  text_color="gray", text_font_size='10px')
+    p.add_glyph(source, textGlyph)
+    p.xgrid.grid_line_color = None
+    p.ygrid.grid_line_color = None
+    return p
+
+
+# In[ ]:
+
+
+def addMatrixDiff(bokehPlot, m1, m2):
+    """
+    This will draw lines showing the difference between two 2D matrices.
+    """
+    p = bokehPlot
+    begX = (np.real(m1)).flatten()
+    begY = (np.imag(m1)).flatten()
+    endX = (np.real(m2)).flatten()
+    endY = (np.imag(m2)).flatten()
+
+    xs = np.array([begX, endX]).T.tolist()
+    ys = np.array([begY, endY]).T.tolist()
+    p.multi_line(xs=xs, ys=ys)
+
+    sourceTarg = bokeh.models.ColumnDataSource(dict(x=begX.tolist(), y=begY.tolist()))
+    glyphTarg = bokeh.models.Circle(x="x", y="y", size=10, line_color="green", 
+                                    fill_color=None, line_width=3)
+    p.add_glyph(sourceTarg, glyphTarg)
+
+    sourceSim = bokeh.models.ColumnDataSource(dict(x=endX.tolist(), y=endY.tolist()))
+    glyphSim = bokeh.models.Circle(x="x", y="y", size=5, line_color=None, 
+                                   fill_color='red', line_width=3)
+    p.add_glyph(sourceSim, glyphSim)
+    return p
+
+
+# In[ ]:
+
+
+m1 = RandomComplexGaussianMatrix(0.4, (5,5))
+m1Error = RandomComplexGaussianMatrix(0.05, (5,5))
+m2 = m1 + m1Error
+plot = makePolarPlot("Blah Blah Blah")
+addMatrixDiff(plot, m1, m2)
+if mainQ: show(plot)
+
+
 # # Passivity
 
 # In[ ]:

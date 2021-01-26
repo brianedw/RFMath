@@ -96,7 +96,7 @@ from Miller import (MillerBuilder)
 # In[ ]:
 
 
-from UtilityMath import (convertArrayToDict, MatrixError)
+from UtilityMath import (convertArrayToDict, MatrixError, makePolarPlot, addMatrixDiff)
 
 
 # # Library
@@ -220,7 +220,9 @@ T
 # In[ ]:
 
 
-np.abs(T-Ks)
+plot = makePolarPlot("Goal K vs Realized using Ideal Comps")
+addMatrixDiff(plot, Ks, T)
+show(plot)
 
 
 # In[ ]:
@@ -254,7 +256,9 @@ T
 # In[ ]:
 
 
-np.abs(T-Ks)
+plot = makePolarPlot("Goal K vs Realized using Realistic Coups and Uncorrected Mults")
+addMatrixDiff(plot, Ks, T)
+show(plot)
 
 
 # In[ ]:
@@ -354,7 +358,9 @@ T
 # In[ ]:
 
 
-np.abs(T-Ks)
+plot = makePolarPlot("Goal K vs Realized using Realistic Coups and Corrected Mults")
+addMatrixDiff(plot, Ks, T)
+show(plot)
 
 
 # In[ ]:
@@ -363,7 +369,7 @@ np.abs(T-Ks)
 MatrixError(T, Ks)
 
 
-# And we see that the error has come down, but not nearly to zero.
+# And we see that the error has come down to nearly that of the ideal devices.
 
 # In[ ]:
 
