@@ -76,7 +76,7 @@ The ordering of the descriptions is from most basic (ie least dependent) to most
 Several functions which are useful converting 2D matrices of complex values into an RGB color space wherein phase is mapped to hue and amplitude is mapped to saturation and brightness.
 
 ### Logger.ipynb
-A class which allows formatted printing to the console with automatic indenting that increases with the depth of the context.  It is useful for tracing code which is operating several function calls deep.  Good OOP practice would call for abstraction and unit-testing, however when comparing to legacy code, logging can be more efficient.
+A class which produces formatted printing to the console with automatic indenting that increases with the depth of the context.  It is useful for tracing code which is operating several function calls deep.  Good OOP practice would call for abstraction and unit-testing, however when comparing to legacy code, logging can be more efficient.
 
 ### UtilityMath.ipynb
 Several linear algebra functions which are of general mathematical utility.

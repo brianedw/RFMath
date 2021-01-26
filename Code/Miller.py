@@ -232,8 +232,8 @@ def ConvertUnitaryToMZITriangle(self, psi_u):
     lp_in = Min
     Mch = len(psi_u[0])
     psi_d = psi_u[:,0]
-    Phis = np.zeros(shape=(Min, Mch))
-    Thetas = np.zeros(shape=(Min, Mch))
+    Phis = np.full(shape=(Min, Mch), fill_value=np.nan)
+    Thetas = np.full(shape=(Min, Mch), fill_value=np.nan)
     self.log.openContext("ich loop")
     for ich in range(0, Mch):
         self.log.printVarX("ich", locals())
@@ -284,7 +284,36 @@ def ConvertKToMZI(self, Ks):
 setattr(MillerBuilder, "ConvertKToMZI", ConvertKToMZI)
 
 
+# In[ ]:
+
+
+def ConvertKToMZIDict(self, Ks, locs=('Uh', 'S', 'V')):
+    # left = 1 = first network encoutered = Uh
+    (leftTriangle, S, rightTriangle) = self.ConvertKToMZI(Ks)
+    n = len(Ks)
+    d1 = dict()
+    for i_ch in range(n):
+        for i_in in range(n-i_ch):
+            d1[('MZI', locs[0], i_ch, i_in)] = tuple(leftTriangle[i_ch, i_in])
+    dS = dict()
+    for i in range(n):
+        dS[('Att', locs[1], i)] = (S[i])
+    d2 = dict()
+    for i_ch in range(n):
+        for i_in in range(n - i_ch):
+            d2[('MZI', locs[2], i_ch, i_in)] = tuple(rightTriangle[i_ch, i_in])
+    return (d1, dS, d2)
+setattr(MillerBuilder, "ConvertKToMZIDict", ConvertKToMZIDict)
+
+
 # ## Test
+
+# In[ ]:
+
+
+mainQ =(__name__ == '__main__')
+mainQ
+
 
 # In[ ]:
 
@@ -315,12 +344,30 @@ miller = MillerBuilder(couplerConv='LC', verbose=False)
 t1, s, t2 = miller.ConvertKToMZI(Ks)
 theta1, phi1 = np.rollaxis(t1, 2)
 theta2, phi2 = np.rollaxis(t2, 2)
-# print("theta1:")
-# print(theta1*180/np.pi)
-# print("phi1:")
-# print(phi1*180/np.pi)
-# print("theta2:")
-# print(theta2*180/np.pi)
-# print("phi2:")
-# print(phi2*180/np.pi)
+if mainQ: print("theta1:")
+if mainQ: print(theta1*180/np.pi)
+if mainQ: print("phi1:")
+if mainQ: print(phi1*180/np.pi)
+if mainQ: print("theta2:")
+if mainQ: print(theta2*180/np.pi)
+if mainQ: print("phi2:")
+if mainQ: print(phi2*180/np.pi)
+
+
+# In[ ]:
+
+
+t1Dict, sDict, t2Dict = miller.ConvertKToMZIDict(Ks)
+
+
+# In[ ]:
+
+
+t1Dict, sDict, t2Dict
+
+
+# In[ ]:
+
+
+
 

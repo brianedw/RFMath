@@ -12,6 +12,7 @@ import numpy as np
 
 from scipy.optimize import root
 from scipy.interpolate import interp2d
+from scipy.ndimage import gaussian_filter
 
 
 # In[ ]:
@@ -28,6 +29,46 @@ from bokeh.io import output_notebook
 from bokeh.plotting import figure, show
 output_notebook()
 bokeh.io.curdoc().theme = 'dark_minimal'
+
+
+# In[ ]:
+
+
+mainQ =(__name__ == '__main__')
+mainQ
+
+
+# # ConvertArrayToDict
+
+# In[ ]:
+
+
+def convertArrayToDict(array, drop=0, preSpec=()):
+    shape = array.shape[:-drop or None]
+    nDim = len(shape)
+    coords = np.array(np.meshgrid(*map(range, shape), indexing="ij"))
+    coords1D = np.moveaxis(coords, 0, len(shape)).reshape(-1, nDim)
+    coordsTup = [tuple(c) for c in coords1D]
+    d = dict()
+    for c in coordsTup:
+        data = array[c]
+        if np.isfinite(data).all():
+            d[preSpec+c] = data
+    return d
+
+
+# In[ ]:
+
+
+array = np.full(shape=(3,3,4,2), fill_value=np.nan)
+array[0,2,3,0] = 2.1
+array[0,2,3,1] = 2.3
+
+
+# In[ ]:
+
+
+convertArrayToDict(array, drop=1, preSpec=('Alpha', 'Bravo'))
 
 
 # # Plot Complex Array
@@ -55,7 +96,7 @@ def plotComplexArray(array, maxRad=10):
 
 data = np.random.uniform(low=-10, high=10, size=(10,15)) + 1j*np.random.uniform(low=-10, high=10, size=(10,15))
 data[:3,:3] = 0
-plotComplexArray(data, maxRad=10)
+if mainQ: plotComplexArray(data, maxRad=10)
 
 
 # In[ ]:
@@ -67,13 +108,7 @@ y = np.linspace(-1, 1, ny)
 xv, yv = np.meshgrid(x, y)
 data = xv + 1j*yv
 data = np.where(np.abs(data) > 1, 0, data)
-plotComplexArray(data, maxRad=1)
-
-
-# In[ ]:
-
-
-
+if mainQ: plotComplexArray(data, maxRad=1)
 
 
 # # Random Complex Matrices
@@ -103,7 +138,7 @@ RandomComplexCircularMatrix(0.3, (2,2))
 
 
 data = RandomComplexCircularMatrix(10, (100,100))
-plotComplexArray(data, maxRad=10)
+if mainQ: plotComplexArray(data, maxRad=10)
 
 
 # In[ ]:
@@ -131,7 +166,7 @@ RandomComplexGaussianMatrix(0.3, (2,2))
 
 
 data = RandomComplexGaussianMatrix(10, (100,100))
-plotComplexArray(data, maxRad=3*10)
+if mainQ: plotComplexArray(data, maxRad=3*10)
 
 
 # # Passivity
@@ -298,7 +333,7 @@ def complex2Dlstsq(comps, field):
     fieldFlat = field.flatten()
     compsFlat = comps.reshape(nComps, nyC*nxC)
     weights = np.linalg.lstsq(compsFlat.T, fieldFlat, rcond=None)[0]
-    weights = weights.reshape(-1,1,1)
+    # weights = weights.reshape(-1,1,1)
     return weights
 
 
@@ -327,7 +362,7 @@ for i in range(ns):
 # In[ ]:
 
 
-plotComplexArray(dataSet[0], maxRad=1.5)
+if mainQ: plotComplexArray(dataSet[0], maxRad=1.5)
 
 
 # In[ ]:
@@ -339,13 +374,13 @@ comps, baseWeights = complex2DPCA(dataSet, nComps=4)
 # In[ ]:
 
 
-prototype = np.sum(comps*baseWeights, axis=0)
+prototype = np.sum(comps * baseWeights.reshape(-1,1,1), axis=0)
 
 
 # In[ ]:
 
 
-plotComplexArray(prototype, maxRad=1.5)
+if mainQ: plotComplexArray(prototype, maxRad=1.5)
 
 
 # In[ ]:
@@ -357,7 +392,7 @@ aveF = np.average(dataSet, axis=0)
 # In[ ]:
 
 
-plotComplexArray(prototype-aveF, maxRad=0.1)
+if mainQ: plotComplexArray(prototype-aveF, maxRad=0.1)
 
 
 # In[ ]:
@@ -365,14 +400,14 @@ plotComplexArray(prototype-aveF, maxRad=0.1)
 
 target = dataSet[0]
 weights = complex2Dlstsq(comps, target)
-fit = np.sum(comps*weights, axis=0)
-plotComplexArray(fit, maxRad=1.5)
+fit = np.sum(comps*weights.reshape(-1,1,1), axis=0)
+if mainQ: plotComplexArray(fit, maxRad=1.5)
 
 
 # In[ ]:
 
 
-plotComplexArray(fit-target, maxRad=.5)
+if mainQ: plotComplexArray(fit-target, maxRad=.5)
 
 
 # # Interpolated Root Finding
@@ -380,7 +415,7 @@ plotComplexArray(fit-target, maxRad=.5)
 # In[ ]:
 
 
-nx, ny = (93, 93)
+nx, ny = (100, 93)
 xs = np.linspace(0, 1023, nx+1, endpoint=True)
 ys = np.linspace(0, 1023, ny+1, endpoint=True)
 xg, yg = np.meshgrid(xs, ys)
@@ -388,14 +423,14 @@ kx1, ky1 = [2*(2*np.pi)/1023, 0.3*(2*np.pi)/1023]
 F1 = np.exp(1j*(kx1*xg + ky1*yg))
 F2 = yg/1023
 F3 = 0.7*np.exp(-((xg-500)**2 / 300**2))
-F4 = RandomComplexGaussianMatrix(0.1, size=F1.shape)
+F4 = RandomComplexGaussianMatrix(0.0001, size=F1.shape)
 dataSet = 6*F1*F2*(1-F3)+F4
 
 
 # In[ ]:
 
 
-plotComplexArray(dataSet, maxRad=5.5)
+if mainQ: plotComplexArray(dataSet, maxRad=5.5)
 
 
 # In[ ]:
@@ -404,29 +439,135 @@ plotComplexArray(dataSet, maxRad=5.5)
 rF = interp2d(xs, ys, np.real(dataSet), kind='linear', bounds_error=True)
 iF = interp2d(xs, ys, np.imag(dataSet), kind='linear', bounds_error=True)
 
-def FRoot(xv, *args):
-    x, y = xv
-    targ, = args
-    rO, = rF(x, y, assume_sorted=True) - np.real(targ)
-    iO, = iF(x, y, assume_sorted=True) - np.imag(targ)
-    return np.array([rO, iO])
+def F(x,y):
+    z, = rF(x, y, assume_sorted=True) + 1j*iF(x, y, assume_sorted=True)
+    return z
 
 
 # In[ ]:
 
 
-startPos = [0, 512]
-target = 0.9+0.2j
+F(512, 1023)
+
+
+# In[ ]:
+
+
+F(512, 0)
+
+
+# In[ ]:
+
+
+target = F(100, 100) + (0.01+0.01j)
+
+
+# In[ ]:
+
+
+startPos = [90, 130]
+
+def FRoot(xv, *args):
+    x, y = xv
+    targ, = args
+    rO = np.real(F(x,y) - target)
+    iO = np.imag(F(x,y) - target)
+    return np.array([rO, iO])
+
 try:
     soln = root(FRoot, startPos, args=target)
 except ValueError:
     print("starting over at [512, 512]")
-    soln = root(FRoot, [512, 512], args=target)
+    soln = root(FRoot, [512, 512])
 np.round(soln['x']).astype(np.int)
 
 
 # In[ ]:
 
 
+def rootRough(F, start):
+    evalPts = np.array(start)
+    
+    F()
 
+
+# In[ ]:
+
+
+start = np.array([512,512])
+bestOffset = -1
+offsets = np.array([[0,0], [1,0], [0,1], [-1,0], [0,-1]])
+pos = start.copy()
+inBounds = lambda xv: 0 <= xv[0] <= 1023 and 0 <= xv[1] <= 1023
+while bestOffset != 0:
+    evalPts = filter(inBounds, pos + offsets)
+    scores = [abs(F(*pt) - (2+1j)) for pt in evalPts]
+    bestOffset = np.argmin(scores)
+    pos = pos + offsets[bestOffset]
+
+
+# In[ ]:
+
+
+def dumbRoot2D(F, start, bounds, target):
+    iBest = -1
+    offsets = np.array([[0,0], [1,0], [0,1], [-1,0], [0,-1]])
+    pos = np.array(start).copy()
+    ((xMin, xMax), (yMin, yMax)) = bounds
+    inBounds = lambda xv: xMin <= xv[0] <= xMax and yMin <= xv[1] <= yMax
+    onEdge = lambda xv: xv[0] == xMin or xv[0] == xMax or xv[1] == yMax # Does not include yMin
+    while iBest != 0:
+        evalPts = filter(inBounds, pos + offsets)
+        scores = [abs(F(*pt) - target) for pt in evalPts]
+        iBest = np.argmin(scores)
+        bestOffset = offsets[iBest]
+        bestScore = scores[iBest]
+        pos = pos + bestOffset
+    if not onEdge(pos):
+        return (pos, bestScore)
+
+
+# In[ ]:
+
+
+dumbRoot2D(F, [512, 512], ((0, 1023), (0, 1023)), (1+0j))
+
+
+# In[ ]:
+
+
+bounds = ((0, 1023), (0, 1023))
+
+
+# In[ ]:
+
+
+inBounds = lambda xv: 0 <= xv[0] <= 1023 and 0 <= xv[1] <= 1023
+evalPtsFiltered = filter(inBounds, evalPts)
+
+
+# In[ ]:
+
+
+pos = np.array([0, 10])
+
+
+# In[ ]:
+
+
+filter(inBounds, pos + offsets)
+
+
+# In[ ]:
+
+
+xSamples = np.linspace(0, 1023, 1023+1)
+ySamples = np.linspace(0, 1023, 1023+1)
+xGrid, yGrid = np.meshgrid(xSamples, ySamples)
+
+
+# In[ ]:
+
+
+gridPts = np.dstack((xGrid, yGrid)).reshape(-1, 2)
 
