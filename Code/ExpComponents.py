@@ -6,6 +6,13 @@
 # In[ ]:
 
 
+get_ipython().run_line_magic('load_ext', 'autoreload')
+get_ipython().run_line_magic('autoreload', '2')
+
+
+# In[ ]:
+
+
 import os, sys
 
 
@@ -74,7 +81,7 @@ from colorize import colorizeComplexArray
 # In[ ]:
 
 
-from UtilityMath import plotComplexArray, gaussian_filter_complex, complex2DPCA, complex2Dlstsq
+from UtilityMath import (plotComplexArray, gaussian_filter_complex, complex2DPCA, complex2Dlstsq, PolarPlot)
 
 
 # In[ ]:
@@ -698,8 +705,26 @@ from NetworkBuilding import Build3dBCoupler
 # In[ ]:
 
 
-fnames = ["..\\GoldenSamples\\CouplerSamples\\3dB_couplers1.txt",
-          "..\\GoldenSamples\\CouplerSamples\\3dB_couplers2.txt"]
+import glob
+
+
+# In[ ]:
+
+
+fnames = glob.glob("..\\GoldenSamples\\CouplerSamples\\??_3dB_[0-9].txt")
+fnames
+
+
+# In[ ]:
+
+
+# fnames = ["..\\GoldenSamples\\CouplerSamples\\3dB_couplers1.txt",
+#           "..\\GoldenSamples\\CouplerSamples\\3dB_couplers2.txt"]
+
+
+# In[ ]:
+
+
 coupDataFromFiles000 = [np.loadtxt(f, dtype=np.complex) for f in fnames]
 
 
@@ -773,6 +798,33 @@ coupNet1.s[0]
 
 
 coupNet2.s[0]
+
+
+# In[ ]:
+
+
+10*np.log10(np.abs(-0.214-0.383j))
+
+
+# In[ ]:
+
+
+pp = PolarPlot("3dB Couplers")
+
+
+# In[ ]:
+
+
+pp.addMatrix(coupNetIdeal.s[0, 2:, :2], 'green')
+for i, _ in enumerate(fnames):
+    coupNet = Build3dBCouplerFromData(freq45, loc="", force=i)
+    pp.addMatrix(coupNet.s[0, 2:, :2], 'red')
+
+
+# In[ ]:
+
+
+if mainQ: pp.show()
 
 
 # In[ ]:

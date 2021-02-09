@@ -8,6 +8,13 @@
 # In[ ]:
 
 
+get_ipython().run_line_magic('load_ext', 'autoreload')
+get_ipython().run_line_magic('autoreload', '2')
+
+
+# In[ ]:
+
+
 import os, sys
 
 
@@ -96,7 +103,7 @@ from Miller import (MillerBuilder)
 # In[ ]:
 
 
-from UtilityMath import (convertArrayToDict, MatrixError, makePolarPlot, addMatrixDiff)
+from UtilityMath import (convertArrayToDict, MatrixError, MatrixSqError, makePolarPlot, addMatrixDiff, PolarPlot)
 
 
 # # Library
@@ -267,7 +274,7 @@ show(plot)
 MatrixError(T, Ks)
 
 
-# ## Adjusting the Multipliers to account for the Couplers
+# ## Adjusting the Multipliers to account for the Simulation Couplers
 
 # There are multipliers which go to form MZIs and are trapped between two couplers.  We can generate a list of all such multipliers by messaging the list of all of the couplers.
 
@@ -314,7 +321,7 @@ MatrixError(TIdeal, TSim)
 
 def fError(z):
     zR, zI = z
-    error = MatrixError(TIdeal, (zR+1j*zI)*TSim)
+    error = MatrixSqError(TIdeal, (zR+1j*zI)*TSim)
     return error
 
 
@@ -325,6 +332,15 @@ soln = minimize(fError, [1, 0])
 zr, zi = soln.x
 zAdjust = zr + 1j*zi
 zAdjust
+
+
+# In[ ]:
+
+
+plot = makePolarPlot("Ideal vs Sim Coupler with Scalar CF")
+addMatrixDiff(plot, TIdeal, TSim)
+addMatrixDiff(plot, TIdeal, TSim*zAdjust)
+show(plot)
 
 
 # In[ ]:
@@ -371,8 +387,172 @@ MatrixError(T, Ks)
 
 # And we see that the error has come down to nearly that of the ideal devices.
 
+# ## Adjusting the Multipliers to account for the Experimental Couplers
+
 # In[ ]:
 
 
+from ExpComponents import Build3dBCouplerFromData, coupNet1
 
 
+# In[ ]:
+
+
+coupNet1.name = 'bar'
+
+
+# In[ ]:
+
+
+coupNet1.copy()
+
+
+# In[ ]:
+
+
+def CouplerBuilderExp(loc):
+    net = coupNet1.copy()
+    net.name = str(loc)
+    return net
+
+
+# In[ ]:
+
+
+CouplerBuilderExp(("C", "Uh", 0, 0, 0)).s[0, 2:, :2]
+
+
+# There are multipliers which go to form MZIs and are trapped between two couplers.  We can generate a list of all such multipliers by messaging the list of all of the couplers.
+
+# In[ ]:
+
+
+allCouplers = MillerCoupLocsX(5, labels=('Uh', 'V'))
+allTrappedMults = []
+for loc in allCouplers:
+    locList = list(loc)
+    locList[0] = 'M'
+    allTrappedMults.append(tuple(locList))
+allTrappedMults;
+
+
+# Here is the ideal transmission of a 3dB Coupler.
+
+# In[ ]:
+
+
+TIdeal = CouplerBuilderIdeal(("C", "Uh", 0, 0, 0)).s[0, 2:, :2]
+TIdeal
+
+
+# Next is the simulated coupler.
+
+# In[ ]:
+
+
+TExp = CouplerBuilderExp(("C", "Uh", 0, 0, 0)).s[0, 2:, :2]
+TExp
+
+
+# In[ ]:
+
+
+MatrixError(TIdeal, TExp)
+
+
+# Next let's see if there is an adjustment factor that minimizes the distance between these two devices.
+
+# In[ ]:
+
+
+def fError(z):
+    zR, zI = z
+    zC = (zR+1j*zI)
+    error = MatrixSqError(TIdeal, zC*TExp)
+    return error
+
+
+# In[ ]:
+
+
+c = 1.2
+fError([c*1, c*0.81])
+
+
+# In[ ]:
+
+
+soln = minimize(fError, [1, 0])
+zr, zi = soln.x
+zAdjust = zr + 1j*zi
+zAdjust
+
+
+# In[ ]:
+
+
+pp = PolarPlot("Ideal vs Exp Coupler with Scalar CF")
+pp.addMatrix(TIdeal, "green")
+pp.addMatrix(TExp, "red")
+pp.addMatrix(TExp*zAdjust, "cyan")
+pp.show()
+
+
+# In[ ]:
+
+
+MatrixSqError(TIdeal, TExp*zAdjust)
+
+
+# We can't apply an arbitary phase/amplitude shift to the couplers, but we can apply it to the local multipliers.  Since each stacked pair of multipliers are between two couplers, we need to apply the adjustment factor "twice", or in other words square it.  Not all multipliers are in MZIs and so we apply this only to the "trapped" mutlipliers.
+
+# In[ ]:
+
+
+for loc, Tc in TcDict.items():
+    mult = multBank.getMultByLoc(loc)
+    if loc in allTrappedMults:
+        mult.setT(zAdjust**2 * Tc)
+    else:
+        mult.setT(Tc)
+
+
+# In[ ]:
+
+
+millerNet3 = BuildMillerNetwork(CouplerBuilderExp, MultBuilder, 
+                               AttBuilder, n=5, labels=('Uh', 'S', 'V'))
+T = millerNet3.s[0, 5:, :5]
+T
+
+
+# In[ ]:
+
+
+plot = makePolarPlot("Goal K vs Realized using Realistic Coups and Corrected Mults")
+addMatrixDiff(plot, Ks, T)
+show(plot)
+
+
+# In[ ]:
+
+
+MatrixError(T, Ks)
+
+
+# In[ ]:
+
+
+TInv = np.linalg.inv(np.identity(5)-T)
+KInv = np.linalg.inv(np.identity(5)-Ks)
+
+
+# In[ ]:
+
+
+plot = makePolarPlot("KInv, TInv")
+addMatrixDiff(plot, KInv, TInv)
+show(plot)
+
+
+# And we see that the error has come down to nearly that of the ideal devices.
