@@ -8,4 +8,4 @@ This is the repository for the measured data. The file names indicate the follow
 A few of the measurements where taken with slightly denser grid, e.g. 128x128. 
 
 
-In the OLD File, the old measurements are inclouded, perhaps for measurements, reference or cross validation of the results. 
+In the OLD File, the old measurements are included, perhaps for measurements, reference or cross validation of the results. 

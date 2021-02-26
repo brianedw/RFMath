@@ -11,3 +11,6 @@ The OLD_Files folder included 12 measurements performed using the switches - How
 The files, MM_3dB_7 and MF_3dB_7 where measured manually, assuning that the unused ports of the 3dB are properly terminated and using a s a refernce port the port #3 of the shitch, for which the VNA was calibrated. 
 Similarly the STD files are the standart deviations of the measurements. 
 
+
+
+26.2.2021 UPDATE: I repeated the measurements for the same MM and MF 7 3dB coupler, this time using the matching circuitry that reduces reflection loss. It seems that the NEW measurements are relatively closewith the previous values that I extracted manualy. 
