@@ -9,3 +9,6 @@ A few of the measurements where taken with slightly denser grid, e.g. 128x128.
 
 
 In the OLD File, the old measurements are included, perhaps for measurements, reference or cross validation of the results. 
+
+Note that the components 40-50 have been measured with the matching circuit on the switches. (this affect the STD of the measurements and possibly slightly the phase of the measured signal)
+
