@@ -786,6 +786,8 @@ def BuildMillerNetwork(CouplerBuilder, MultBuilder, AttBuilder, n=5, labels=('Uh
 
 # ### Label Generation
 
+# #### Miller
+
 # In[ ]:
 
 
@@ -970,6 +972,22 @@ def MillerCoupLocsX(n, labels=('Uh', 'V')):
 
 
 MillerCoupLocsX(3, ('Uh','V'))
+
+
+# #### New
+
+# In[ ]:
+
+
+def NewMultLocs(n, loc):
+    """
+    Generates all location signatures for all Multipliers in a Miller Triangle.
+    """
+    multLocs = []
+    for i_out in range(n):
+        for i_in in range(n):
+            multLocs.append(("M", loc, i_in, i_out))
+    return multLocs
 
 
 # ### New Architecture

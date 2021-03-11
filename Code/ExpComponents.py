@@ -13,7 +13,7 @@ get_ipython().run_line_magic('autoreload', '2')
 # In[ ]:
 
 
-import os, sys
+import os, sys, glob
 
 
 # In[ ]:
@@ -100,22 +100,22 @@ mainQ
 # In[ ]:
 
 
-def pathData(i):
-    return"../GoldenSamples/MultiplierSamples/LMC6492_64by64_"+str(i)+".txt"
+fNames94x94 = glob.glob('..\\GoldenSamples\\MultiplierSamples\\*_94by94.txt')
 
 
 # In[ ]:
 
 
 nSamples = 5
-pcaComps = 2
+pcaComps = 4
 
 
 # In[ ]:
 
 
-dataSetRough = np.array([np.loadtxt(pathData(i+1), dtype=np.complex) 
-                    for i in range(nSamples)])
+dataSetList = [np.loadtxt(fNames, dtype=np.complex) for fNames in fNames94x94]
+dataSetRough = np.array(dataSetList)
+print("dataSetRough.shape", dataSetRough.shape)
 
 
 # In[ ]:
@@ -136,8 +136,8 @@ baseWeights
 # In[ ]:
 
 
-vgaSamplePoints = np.arange(0., 1024., 16.)
-psSamplePoints = np.arange(0., 1024., 16.)
+vgaSamplePoints = np.loadtxt('..\\GoldenSamples\\MultiplierSamples\\1_94by94Nv.txt')[0]
+psSamplePoints  = np.loadtxt('..\\GoldenSamples\\MultiplierSamples\\1_94by94Nv.txt')[0]
 
 
 # In[ ]:
@@ -150,13 +150,9 @@ dataBounds
 # In[ ]:
 
 
-if mainQ: plotComplexArray(comps[0], maxRad=.05)
-
-
-# In[ ]:
-
-
-if mainQ: plotComplexArray(comps[1], maxRad=.05)
+if mainQ:
+    for i in range(pcaComps):
+        plotComplexArray(comps[i], maxRad=.05)
 
 
 # In[ ]:
@@ -535,8 +531,17 @@ setattr(MultiplierBank, "addMult", addMult)
 # In[ ]:
 
 
+def getMults(self):
+    return list(self.bankByLoc.values())
+
+setattr(MultiplierBank, "getMults", getMults)
+
+
+# In[ ]:
+
+
 def getMultByPhysNum(self, pNum):
-    return self.bankByPhysNum[pNum]
+    return self.bankByLoc
 
 setattr(MultiplierBank, "getMultByPhysNum", getMultByPhysNum)
 
@@ -585,7 +590,9 @@ def getPersonalityVectors(self):
     """
     locs = self.getLocs()
     listOfWeights = [self.bankByLoc[l].weights for l in locs]
-    return np.array(listOfWeights).flatten()
+    weights1DComplex = np.array(listOfWeights).flatten()
+    weights1DReal = weights1DComplex.view('float')
+    return weights1DReal
 
 setattr(MultiplierBank, "getPersonalityVectors", getPersonalityVectors)
 
@@ -593,7 +600,17 @@ setattr(MultiplierBank, "getPersonalityVectors", getPersonalityVectors)
 # In[ ]:
 
 
-def setPersonalityVectors(self, v):
+def setAllMults(self, psVal, vgaVal):
+    for mult in self.getMults():
+        mult.setSettings(psVal, vgaVal)
+        
+setattr(MultiplierBank, "setAllMults", setAllMults)        
+
+
+# In[ ]:
+
+
+def setPersonalityVectors(self, weights1DReal):
     """
     The personality weights of each multiplier will need to be optimized.  It
     will be necessary to treat all of these as a 1D List.  This provides an
@@ -601,9 +618,10 @@ def setPersonalityVectors(self, v):
     
     Weights are set in an order based on the multiplier locations.
     """
+    weights1DComplex = weights1DReal.view('complex')
     locs = self.getLocs()
-    vSplit = np.split(v, len(locs))
-    for i, loc in enumerate(loc):
+    vSplit = np.split(weights1DComplex, len(locs))
+    for i, loc in enumerate(locs):
         mult = self.bankByLoc[loc]
         mult.setWeights(vSplit[i])
 

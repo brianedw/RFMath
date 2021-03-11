@@ -103,7 +103,7 @@ from Miller import (MillerBuilder)
 # In[ ]:
 
 
-from UtilityMath import (convertArrayToDict, MatrixError, MatrixSqError, makePolarPlot, addMatrixDiff, PolarPlot)
+from UtilityMath import (convertArrayToDict, MatrixError, MatrixSqError, makePolarPlot, addMatrixDiff, PolarPlot, ReIm)
 
 
 # # Library
@@ -556,3 +556,258 @@ show(plot)
 
 
 # And we see that the error has come down to nearly that of the ideal devices.
+
+# ## Adjusting the Multipliers to account for the Experimental Couplers with Optimization
+
+# In[ ]:
+
+
+from ExpComponents import Build3dBCouplerFromData, coupNet1, coupNet2
+
+
+# In[ ]:
+
+
+coupNet1.name = 'bar'
+
+
+# In[ ]:
+
+
+coupNet1.copy()
+
+
+# In[ ]:
+
+
+def CouplerBuilderExp(loc):
+    choice = hash((loc))%2
+    coupNet = [coupNet1, coupNet2][choice]
+    net = coupNet.copy()
+    net.name = str(loc)
+    return net
+
+
+# In[ ]:
+
+
+CouplerBuilderExp(("C", "Uh", 0, 0, 0)).s[0, 2:, :2]
+
+
+# There are multipliers which go to form MZIs and are trapped between two couplers.  We can generate a list of all such multipliers by messaging the list of all of the couplers.
+
+# In[ ]:
+
+
+allCouplers = MillerCoupLocsX(5, labels=('Uh', 'V'))
+allTrappedMults = []
+for loc in allCouplers:
+    locList = list(loc)
+    locList[0] = 'M'
+    allTrappedMults.append(tuple(locList))
+allTrappedMults;
+
+
+# Here is the ideal transmission of a 3dB Coupler.
+
+# In[ ]:
+
+
+TIdeal = CouplerBuilderIdeal(("C", "Uh", 0, 0, 0)).s[0, 2:, :2]
+TIdeal
+
+
+# Next is the simulated coupler.
+
+# In[ ]:
+
+
+TExp = (coupNet1.s[0, 2:, :2] + coupNet2.s[0, 2:, :2])/2
+TExp
+
+
+# Next let's see if there is an adjustment factor that minimizes the distance between these two devices.
+
+# In[ ]:
+
+
+def fError(z):
+    zR, zI = z
+    zC = (zR+1j*zI)
+    error = MatrixSqError(TIdeal, zC*TExp)
+    return error
+
+
+# In[ ]:
+
+
+soln = minimize(fError, [1, 0])
+zr, zi = soln.x
+zAdjust = zr + 1j*zi
+zAdjust
+
+
+# In[ ]:
+
+
+pp = PolarPlot("Ideal vs Exp Coupler with Scalar CF")
+pp.addMatrix(TIdeal, "green")
+pp.addMatrix(coupNet1.s[0, 2:, :2], "red")
+pp.addMatrix(coupNet2.s[0, 2:, :2], "red")
+pp.addMatrix(zAdjust*coupNet1.s[0, 2:, :2], "cyan")
+pp.addMatrix(zAdjust*coupNet2.s[0, 2:, :2], "cyan")
+pp.show()
+
+
+# In[ ]:
+
+
+MatrixSqError(TIdeal, TExp*zAdjust)
+
+
+# We can't apply an arbitary phase/amplitude shift to the couplers, but we can apply it to the local multipliers.  Since each stacked pair of multipliers are between two couplers, we need to apply the adjustment factor "twice", or in other words square it.  Not all multipliers are in MZIs and so we apply this only to the "trapped" mutlipliers.
+
+# In[ ]:
+
+
+allTrappedMults
+
+
+# In[ ]:
+
+
+for loc, Tc in TcDict.items():
+    mult = multBank.getMultByLoc(loc)
+    if loc in allTrappedMults:
+        mult.setT(zAdjust**2 * Tc)
+    else:
+        mult.setT(Tc)
+
+
+# In[ ]:
+
+
+millerNet3 = BuildMillerNetwork(CouplerBuilderExp, MultBuilder, 
+                               AttBuilder, n=5, labels=('Uh', 'S', 'V'))
+T = millerNet3.s[0, 5:, :5]
+T
+
+
+# In[ ]:
+
+
+plot = makePolarPlot("Goal K vs Realized using Realistic Coups and Corrected Mults")
+addMatrixDiff(plot, Ks, T)
+show(plot)
+
+
+# In[ ]:
+
+
+mult = multBank.bankByPhysNum[0]
+ReIm(mult.TExpected)
+
+
+# In[ ]:
+
+
+def getTVecFromMultBank(multBank):
+    allTReIm = []
+    physNumbers = []
+    for idNum, mult in multBank.bankByPhysNum.items():
+        physNumbers.append(idNum)
+        r,i = ReIm(mult.TExpected)
+        allTReIm.extend([r,i])
+    return physNumbers, allTReIm
+
+
+# In[ ]:
+
+
+physNumbers, allTReIm = getTsFromMultBank(multBank)
+
+
+# In[ ]:
+
+
+MatrixError(T, Ks)
+
+
+# In[ ]:
+
+
+def setTVecIntoMultBank(multBank, TReIm):
+    physNumbers = list(multBank.bankByPhysNum.keys())
+    tRe = TReIm[0::2]
+    tIm = TReIm[1::2]
+    for i, idNum in enumerate(physNumbers):
+        t = tRe[i] + 1j*tIm[i]
+        mult = multBank.bankByPhysNum[idNum]
+        mult.setT(t))
+
+
+# In[ ]:
+
+
+def fError(TReIm):
+    setTVecIntoMultBank(multBank, TReIm)
+    millerNet3 = BuildMillerNetwork(CouplerBuilderExp, MultBuilder, 
+                                   AttBuilder, n=5, labels=('Uh', 'S', 'V'))
+    T = millerNet3.s[0, 5:, :5]
+    return MatrixSqError(T, Ks)
+
+
+# In[ ]:
+
+
+soln = minimize(fError, allTReIm)
+
+
+# In[ ]:
+
+
+soln.fun
+
+
+# In[ ]:
+
+
+TReImFinal = soln.x
+
+
+# In[ ]:
+
+
+setTVecIntoMultBank(multBank, TReImFinal)
+millerNet3 = BuildMillerNetwork(CouplerBuilderExp, MultBuilder, 
+                               AttBuilder, n=5, labels=('Uh', 'S', 'V'))
+T = millerNet3.s[0, 5:, :5]
+plot = PolarPlot("K vs T using Realistic Coups and Optimized Mults")
+plot.addMatrixDiff(Ks, T)
+plot.addMatrix()
+plot.show()
+
+
+# In[ ]:
+
+
+testList = list(range(10))
+
+
+# In[ ]:
+
+
+testList[0::2]
+
+
+# In[ ]:
+
+
+testList[1::2]
+
+
+# In[ ]:
+
+
+
+

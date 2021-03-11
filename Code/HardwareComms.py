@@ -65,13 +65,15 @@ class SwitchComm:
 # In[ ]:
 
 
-def __init__(self, comValue='COM_'):
+def __init__(self, comValue='COM_', portAliases=None):
     """ Creates a communication link to a Metromini controlling a 1:8 RF switch.
 
     Args: 
         comValue: The serial port controlling the switch.  Example 'COM4'
+        portAliases: Dict representing command->switchport pairs.  Example: {1:6, 2:5, 3:4, 4:3, 5:2}
     """
     self.switchCom = serial.Serial()
+    self.portAliases = portAliases
     self.comValue = comValue
     self.switchCom.port = comValue
     self.switchCom.close()
@@ -93,7 +95,10 @@ def setSwitch(self, i, verbose=False):
         switchPort (int): The output switch number [0-7].
     """
     self.switchCom.flushInput()
-    self.switchCom.write(str.encode(str(i)))
+    if portAliases:
+        self.switchCom.write(str.encode(str(portAliases[i])))        
+    else:    
+        self.switchCom.write(str.encode(str(i)))
     if verbose:
         time.sleep(2)
         response = self.switchCom.read_all()
@@ -119,13 +124,7 @@ setattr(SwitchComm, 'closeSwitch', closeSwitch)
 # inputSwitch = SwitchComm(comValue='COM1')
 
 
-# ## MCUs
-
-# In[ ]:
-
-
-F
-
+# ## Multiplier
 
 # In[ ]:
 
@@ -332,6 +331,69 @@ def closeVNA(self):
     self.vna.close()
     
 setattr(VNAComm, 'closeVNA', closeVNA)
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+
+
+
+# ## ExperimentalSetup
+
+# In[ ]:
+
+
+class ExperimentalSetup:
+    pass
+
+def __init__(self, inSwitchComm, outSwitchCommm, multBankComm, vnaCommm, n=5):
+    self.inSwitchComm = inSwitchComm
+    self.outSwitchComm = outSwitchComm
+    self.multBankComm = multBankComm
+    self.vnaComm = vnaComm
+    self.n = n
+    
+setattr(ExperimentalSetup, "__init__", __init__)
+
+
+# In[ ]:
+
+
+def setMults(psVals, vgaVals, physNumbers):
+    if type(psVals) == int and type(vgaVals) == int:
+        if type(physNumbers) == int:
+            self.multBankComm.setMult(physNumbers, vgaVals, psVals)
+        else:
+            for physNum in physNumbers:
+                self.multBankComm.setMult(physNum, vgaVals, psVals)
+    else:
+        for physNum, vgaVal, psVal in zip(physNumbers, vgaVals, psVals):
+            self.multBankComm.setMult(physNum, vgaVal, psVal)
+            
+setattr(ExperimentalSetup, "setMults", setMults)
+
+
+# In[ ]:
+
+
+def measureSMatrix(delay=0):
+    data = np.zeros((n,n), dtype=np.complex)
+    for iOut in range(n):
+        self.outSwitchComm.setSwitch(iOut+1)
+        for iIn in range(n):
+            self.inSwitchComm.setSwitch(iIn+1)
+            time.sleep(delay)
+            data[iOut, iIn] = self.vnaComm.getS21AllAt45()
+    return data
+
+setattr(ExperimentalSetup, "measureSMatrix", measureSMatrix)
 
 
 # In[ ]:

@@ -8,7 +8,7 @@
 # In[ ]:
 
 
-import os, sys
+import os, sys, glob
 
 
 # In[ ]:
@@ -107,8 +107,13 @@ nSamples = 5
 # In[ ]:
 
 
-dataSet = np.array([np.loadtxt(pathData(i+1), dtype=np.complex) 
-                    for i in range(nSamples)])
+fNames94x94 = glob.glob('..\\GoldenSamples\\MultiplierSamples\\*_94by94.txt')
+
+
+# In[ ]:
+
+
+dataSet = np.array([np.loadtxt(fName, dtype=np.complex) for fName in fNames94x94])
 
 
 # In[ ]:
