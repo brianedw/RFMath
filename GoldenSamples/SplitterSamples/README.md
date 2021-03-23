@@ -1,6 +1,8 @@
 # Measurements of AD5PS-1+ "5 Ways Core & Wire Power Splitter, 1 - 400 MHz, 50Ω"
 
-These files are measurements across the 5:1 splitters.  A total of ten (TODO: is this right?) were built, named "1" through "10".  These boards are a trivial breakout of the Mini-Circuit AD5PS-1+.  Ideal values for this device would be $S_{XS} = (1/5)^{(1/2)} = 0.447$
+These files are measurements across the 5:1 splitters.  A total of 9 AD%PSP-1 were built, named "1" through "9".  These boards are a trivial breakout of the Mini-Circuit AD5PS-1+. Ideal values for this device would be $S_{XS} = (1/5)^{(1/2)} = 0.447$
+
+There is one "Frankenstein" component using the SCP-5-1 component (assosiated files the sp_F1 and sp_F1STD)
 
 The measurements are taken at 45MHz.  Ports are enumerated as Port S and Port1 through Port5.  
 
@@ -16,7 +18,7 @@ for device `X` while `sp_XSTD.txt` shows the standard deviation of the measureme
 
 The measurements were performed using the digitally selectable switch<sup>[1](#digiswitch)</sup>.  All ports on the switch were assumed to be identical and a single calibration was used. 
 
-Currently measured devices are 1, 2, 3, 4, 5, 6, 7, and 10.
+Currently measured devices are 1, 2, 3, 4, 5, 6, 7, 10, and F1 (frankenstein).
 
 Example of a measurement file `sp_1.txt`
 ```
