@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 
 import sys
@@ -9,33 +9,39 @@ import os
 import math
 
 
-# In[ ]:
+# In[21]:
+
+
+os.getcwd()
+
+
+# In[2]:
 
 
 #!conda install --yes --prefix {sys.prefix} pyserial
 
 
-# In[ ]:
+# In[3]:
 
 
 import serial
 import time
 
 
-# In[ ]:
+# In[4]:
 
 
 import pyvisa
 
 
-# In[ ]:
+# In[5]:
 
 
 import numpy as np
 import pandas as pd
 
 
-# In[ ]:
+# In[6]:
 
 
 import sys
@@ -47,7 +53,7 @@ else:
 
 # # Library
 
-# In[ ]:
+# In[7]:
 
 
 get_ipython().system(' python -m serial.tools.list_ports')
@@ -55,14 +61,14 @@ get_ipython().system(' python -m serial.tools.list_ports')
 
 # ## Switch
 
-# In[ ]:
+# In[8]:
 
 
 class SwitchComm:
     pass
 
 
-# In[ ]:
+# In[9]:
 
 
 def __init__(self, comValue='COM_', portAliases=None):
@@ -85,7 +91,7 @@ def __init__(self, comValue='COM_', portAliases=None):
 setattr(SwitchComm, '__init__', __init__)
 
 
-# In[ ]:
+# In[10]:
 
 
 def setSwitch(self, i, verbose=False):
@@ -95,8 +101,8 @@ def setSwitch(self, i, verbose=False):
         switchPort (int): The output switch number [0-7].
     """
     self.switchCom.flushInput()
-    if portAliases:
-        self.switchCom.write(str.encode(str(portAliases[i])))        
+    if self.portAliases:
+        self.switchCom.write(str.encode(str(self.portAliases[i])))        
     else:    
         self.switchCom.write(str.encode(str(i)))
     if verbose:
@@ -107,26 +113,44 @@ def setSwitch(self, i, verbose=False):
 setattr(SwitchComm, 'setSwitch', setSwitch)
 
 
-# In[ ]:
+# In[11]:
 
 
-def closeSwitch(self):
+def close(self):
     """ Closes the communication serial port to the switch.
     """
     self.switchCom.close()
     
-setattr(SwitchComm, 'closeSwitch', closeSwitch)
+setattr(SwitchComm, 'close', close)
 
 
-# In[ ]:
+# In[12]:
 
 
-# inputSwitch = SwitchComm(comValue='COM1')
+#inputSwitch = SwitchComm(comValue='COM4')
+
+
+# In[13]:
+
+
+#inputSwitch.close()
+
+
+# In[14]:
+
+
+#outputSwitch = SwitchComm(comValue='COM3')
+
+
+# In[15]:
+
+
+#outputSwitch.close()
 
 
 # ## Multiplier
 
-# In[ ]:
+# In[8]:
 
 
 class MultBankComm:
@@ -135,7 +159,7 @@ class MultBankComm:
     iMaster = 255    # It is expected that the Multiplier at the head has the number 255.
 
 
-# In[ ]:
+# In[9]:
 
 
 def __init__(self, comValue='COM_'):
@@ -146,7 +170,8 @@ def __init__(self, comValue='COM_'):
     
     """
     self.multBankComm = serial.Serial()
-    self.multBankComm = comValue
+    self.comValue = comValue
+    self.multBankComm.port = comValue
     self.multBankComm.close()
     self.multBankComm.open()
     time.sleep(0.5)
@@ -156,10 +181,10 @@ def __init__(self, comValue='COM_'):
 setattr(MultBankComm, '__init__', __init__)
 
 
-# In[ ]:
+# In[10]:
 
 
-def setMult(idNum, v1, v2, verbose=False):
+def setMult(self, idNum, v1, v2, verbose=False):
     """ Sets the VGA and PS values for a Multiplier
     
     Args:
@@ -170,9 +195,9 @@ def setMult(idNum, v1, v2, verbose=False):
     """
     self.multBankComm.flushInput()
     # TODO Should this be np.clip(xxx, 0, 1023)
-    v1Out = np.clip(v1Out, 1, 1023)
-    v2Out = np.clip(v2Out, 1, 1023)
-    outString = " ".join((str(idNum), writeCode, str(v1Out), str(v2Out)))    # "10 2 300 1023"
+    v1Out = np.clip(v1, 1, 1023)
+    v2Out = np.clip(v2, 1, 1023)
+    outString = " ".join((str(idNum), MultBankComm.writeCode, str(v1Out), str(v2Out)))    # "10 2 300 1023"
     self.multBankComm.write(str.encode(outString))
     if verbose:
         time.sleep(1)
@@ -182,7 +207,7 @@ def setMult(idNum, v1, v2, verbose=False):
 setattr(MultBankComm, 'setMult', setMult)
 
 
-# In[ ]:
+# In[11]:
 
 
 def setMultBank(self, data, verbose=False):
@@ -199,7 +224,7 @@ def setMultBank(self, data, verbose=False):
 setattr(MultBankComm, 'setMultBank', setMultBank)
 
 
-# In[ ]:
+# In[12]:
 
 
 def blinkMult(self, multID, verbose=False):
@@ -209,7 +234,7 @@ def blinkMult(self, multID, verbose=False):
         multID (int): the target multiplier
     """
     self.multBankComm.flushInput()
-    outString = " ".join((str(multID), blinkCode))
+    outString = " ".join((str(multID), MultBankComm.blinkCode))
     self.multBankComm.write(str.encode(outString))
     if verbose:
         time.sleep(2)
@@ -219,10 +244,10 @@ def blinkMult(self, multID, verbose=False):
 setattr(MultBankComm, 'blinkMult', blinkMult)
 
 
-# In[ ]:
+# In[13]:
 
 
-def blinkAll(self, multIDs, verbose=False):
+def blinkList(self, multIDs, verbose=False, delay=5.5):
     """ Blinks all multipliers.
     
     Note that the head multiplier is prepended to the list.
@@ -230,23 +255,48 @@ def blinkAll(self, multIDs, verbose=False):
     Args:
         multIDs (list of ints): the IDs of the target multlipliers.
     """
-    allIDs = [iMaster] + multIDs 
-    for multID in allIDs:
-        self.blinkMCU(multID, verbose)
-        time.sleep(5.5) # Needed wait time to allow MCU to return to listenting state.
+    self.blinkMult(MultBankComm.iMaster, verbose)
+    time.sleep(5.5)
+    for multID in multIDs:
+        self.blinkMult(multID, verbose)
+        time.sleep(delay) # Needed wait time to allow MCU to return to listenting state.
 
-setattr(MultBankComm, 'blinkAll', blinkAll)
-
-
-# In[ ]:
+setattr(MultBankComm, 'blinkList', blinkList)
 
 
-def closeMultBank(self):
+# In[14]:
+
+
+def close(self):
     """ Closes the Serial Port associated with this multiplier bank.
     """
     self.multBankComm.close()
     
-setattr(MultBankComm, 'closeMultBank', closeMultBank)
+setattr(MultBankComm, 'close', close)
+
+
+# In[17]:
+
+
+# multBankComm = MultBankComm(comValue='COM5')
+
+
+# In[18]:
+
+
+# multBankComm.blinkMult(255)
+
+
+# In[19]:
+
+
+# multBankComm.blinkList([6,7,8])
+
+
+# In[20]:
+
+
+# multBankComm.close()
 
 
 # ## VNA
@@ -327,22 +377,28 @@ setattr(VNAComm, 'getS21freq', getS21freq)
 # In[ ]:
 
 
-def closeVNA(self):
+def close(self):
     self.vna.close()
     
-setattr(VNAComm, 'closeVNA', closeVNA)
+setattr(VNAComm, 'close', close)
 
 
 # In[ ]:
 
 
-
+# vnaComm = VNAComm()
 
 
 # In[ ]:
 
 
+# vnaComm.getS21at45()
 
+
+# In[ ]:
+
+
+# vnaComm.close()
 
 
 # ## ExperimentalSetup
@@ -353,7 +409,7 @@ setattr(VNAComm, 'closeVNA', closeVNA)
 class ExperimentalSetup:
     pass
 
-def __init__(self, inSwitchComm, outSwitchCommm, multBankComm, vnaCommm, n=5):
+def __init__(self, inSwitchComm, outSwitchComm, multBankComm, vnaComm, n=5):
     self.inSwitchComm = inSwitchComm
     self.outSwitchComm = outSwitchComm
     self.multBankComm = multBankComm
@@ -366,16 +422,20 @@ setattr(ExperimentalSetup, "__init__", __init__)
 # In[ ]:
 
 
-def setMults(psVals, vgaVals, physNumbers):
+def setMults(self, psVals, vgaVals, physNumbers):
     if type(psVals) == int and type(vgaVals) == int:
         if type(physNumbers) == int:
             self.multBankComm.setMult(physNumbers, vgaVals, psVals)
+            time.sleep(0.2)
         else:
             for physNum in physNumbers:
                 self.multBankComm.setMult(physNum, vgaVals, psVals)
+                time.sleep(0.2)
     else:
         for physNum, vgaVal, psVal in zip(physNumbers, vgaVals, psVals):
             self.multBankComm.setMult(physNum, vgaVal, psVal)
+            time.sleep(0.2)
+            
             
 setattr(ExperimentalSetup, "setMults", setMults)
 
@@ -383,17 +443,65 @@ setattr(ExperimentalSetup, "setMults", setMults)
 # In[ ]:
 
 
-def measureSMatrix(delay=0):
-    data = np.zeros((n,n), dtype=np.complex)
-    for iOut in range(n):
+def measureSMatrix(self, delay=1):
+    dataVal = np.zeros((self.n, self.n), dtype=np.complex)
+    dataSTD = np.zeros((self.n, self.n), dtype=np.float)
+    for iOut in range(self.n):
         self.outSwitchComm.setSwitch(iOut+1)
-        for iIn in range(n):
+        for iIn in range(self.n):
             self.inSwitchComm.setSwitch(iIn+1)
             time.sleep(delay)
-            data[iOut, iIn] = self.vnaComm.getS21AllAt45()
-    return data
+            val, std = self.vnaComm.getS21AllAt45()
+            dataVal[iOut, iIn] = val
+            dataSTD[iOut, iIn] = std
+    return (dataVal, dataSTD)
 
 setattr(ExperimentalSetup, "measureSMatrix", measureSMatrix)
+
+
+# In[ ]:
+
+
+def close(self):
+    self.inSwitchComm.close()
+    self.outSwitchComm.close()
+    self.multBankComm.close()
+    self.vnaComm.close()
+    
+setattr(ExperimentalSetup, "close", close)
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+# inputSwitchComm = SwitchComm(comValue='COM4')
+# outputSwitchComm = SwitchComm(comValue='COM3')
+# vnaComm = VNAComm()
+# multBankComm = MultBankComm(comValue='COM5')
+
+
+# In[ ]:
+
+
+# expSetup = ExperimentalSetup(inputSwitchComm, outputSwitchComm, multBankComm, vnaComm)
+
+
+# In[ ]:
+
+
+# expSetup.close()
+
+
+# In[ ]:
+
+
+# multBankComm.blinkList([6, 11, 16, 21, 27], delay=0.5)
 
 
 # In[ ]:
