@@ -22,7 +22,8 @@
 // For Input use the line below.
 // int portMap[5]  = {6, 5, 4, 3, 2};
 // For Output
-int portMap[5] = {3, 4, 5, 6, 7};
+// int portMap[5] = {3, 4, 5, 6, 7};
+int portMap[8] = {1, 2, 3, 4, 5, 6, 7, 8};
 
 void setOutputs(int meshPort){
   // Sets the switch port.  `meshPort` expected to be in the range [1-5].
