@@ -16,6 +16,13 @@ get_ipython().run_line_magic('autoreload', '2')
 
 
 import os, sys
+from time import sleep
+
+
+# In[ ]:
+
+
+os.getcwd()
 
 
 # In[ ]:
@@ -65,6 +72,12 @@ palette = Dark2[8]*10
 
 palette = Dark2[8]*10
 colors = itertools.cycle(palette)
+
+
+# In[ ]:
+
+
+from UtilityMath import plotComplexArray
 
 
 # In[ ]:
@@ -128,9 +141,36 @@ from HardwareComms import (MultBankComm, SwitchComm, VNAComm, ExperimentalSetup)
 # 
 # Finally, we apply these digital inputs both in simulation and experiment.  We take a physical measurement of the network and compare the target, simulation, and physical network responses.
 
-# ## Definitions
+# ## Definitions (Exp)
 
 # First we define the various devices.
+
+# In[ ]:
+
+
+inputSwitchComm = SwitchComm(comValue='COM4', portAliases={1:6, 2:5, 3:4, 4:3, 5:2, "test":1})
+outputSwitchComm = SwitchComm(comValue='COM3', portAliases={1:3, 2:4, 3:5, 4:6, 5:7, "test":1})
+vnaComm = VNAComm()
+multBankComm = MultBankComm(comValue='COM5')
+
+
+# In[ ]:
+
+
+# inputSwitchComm.setSwitch("test", verbose=True)
+
+
+# In[ ]:
+
+
+# outputSwitchComm.setSwitch("test", verbose=True)
+
+
+# In[ ]:
+
+
+exp = ExperimentalSetup(inputSwitchComm, outputSwitchComm, multBankComm, vnaComm)
+
 
 # In[ ]:
 
@@ -149,6 +189,8 @@ from HardwareComms import (MultBankComm, SwitchComm, VNAComm, ExperimentalSetup)
 # exp = ExperimentalSetup(switchCommIn, switchCommOut, vnaComm, multBankCom)
 
 
+# ## Definitions (Sim)
+
 # In[ ]:
 
 
@@ -165,7 +207,7 @@ freq45 = rf.Frequency(start=45, stop=45, npoints=1, unit='mhz', sweep_type='lin'
 
 
 allMultLocs = NewMultLocs(5,'N')
-allMultLocs[7]
+allMultLocs;
 
 
 # Every device has a "Physical Number" that is used for addressing to allow the computer to specify to which device a command is intended.  These are enumarated below.  Similar to SParams, the rows denote output lines while the columns denote input lines.
@@ -173,12 +215,14 @@ allMultLocs[7]
 # In[ ]:
 
 
-multPhysNumberBank = [[  1,  2,  3,  4,   5],
-                      [  6,  7,  8,  9,  10],
-                      [ 11, 12, 13, 14,  15],
-                      [ 16, 17, 18, 19,  20],
-                      [ 21, 22, 23, 24,  25]]
-multPhysNumberBank = np.array(multPhysNumberBank)
+# Be careful here.  A horizontal row in the physical world represents a column in matrix multiplication
+multPhysNumberBank = [[ 31, 32, 33, 34, 35],
+                      [ 11, 12, 13, 14, 15],
+                      [ 16, 17, 18, 19, 20],
+                      [ 21, 22, 23, 24, 25],
+                      [ 26, 27, 28, 29, 30]]
+multPhysNumberBank = np.array(multPhysNumberBank).T
+multPhysNumberBank
 
 
 # And just a quick spot check to make sure we have accidently applied a transpose.
@@ -208,6 +252,73 @@ for loc in allMultLocs:
 
 # ## Tuning
 
+# ### Debugging
+
+# In[ ]:
+
+
+for loc in allMultLocs:
+    mult = multBank.getMultByLoc(loc)
+    try: 
+        multBankComm.blinkMult(mult.physNumber)
+    except NameError:
+        pass        
+    sleep(0.2)
+
+
+# In[ ]:
+
+
+outIndex = 5
+inIndex = 3
+vga, ps = (1000, 0)
+loc = ('M', 'N', inIndex-1, outIndex-1) # ('M', 'N', in, out) :(.
+mult = multBank.getMultByLoc(loc)
+physNum = mult.physNumber
+print(physNum)
+multBankComm.setMult(physNum, vga, ps)
+inputSwitchComm.setSwitch(inIndex)
+outputSwitchComm.setSwitch(outIndex)
+sleep(2)
+vnaComm.getS21AllAt45()
+
+
+# In[ ]:
+
+
+multBankComm.setMult(28, 100, 200)
+
+
+# In[ ]:
+
+
+inputSwitchComm.setSwitch(3)
+
+
+# In[ ]:
+
+
+exp.setMults(0, 100, multBank.getPhysNums())
+
+
+# In[ ]:
+
+
+exp.vnaComm.getS21AllAt45()
+
+
+# In[ ]:
+
+
+SMat, STD = exp.measureSMatrix(delay=2)
+
+
+# In[ ]:
+
+
+np.abs(SMat)
+
+
 # ### Physical Measurement
 
 # Next we define a series of multiplier set points that we'll use to ascertain the multiplier's PCA weights.
@@ -215,8 +326,8 @@ for loc in allMultLocs:
 # In[ ]:
 
 
-tuningPSVals = np.linspace(0, 1023, 5, dtype=np.int)
-tuningVGAVals = np.linspace(0, 1023, 5, dtype=np.int)
+tuningPSVals = np.linspace(0, 1023, 10, dtype=np.int)
+tuningVGAVals = np.linspace(0, 1023, 10, dtype=np.int)
 
 
 # In[ ]:
@@ -232,9 +343,9 @@ tuningVals = [(ps, vga) for vga in tuningVGAVals for ps in tuningPSVals]
 
 tuningMatricesM = []
 for (psVal, vgaVal) in tuningVals:
-    exp.setMults(psVal, vgaVal, multBank.getPhysNums())
+    exp.setMults(int(psVal), int(vgaVal), multBank.getPhysNums())
     time.sleep(1)
-    m = exp.measureSMatrix(delay=2)
+    m, std = exp.measureSMatrix(delay=2)
     tuningMatricesM.append(m)
 tuningMatricesM = np.array(tuningMatricesM)
 
@@ -242,8 +353,8 @@ tuningMatricesM = np.array(tuningMatricesM)
 # In[ ]:
 
 
-np.save("tuningVals", tuningVals)
-np.save("tuningMatricesM", tuningMatricesM)
+np.save("tuningVals10", tuningVals)
+np.save("tuningMatricesM10", tuningMatricesM)
 
 
 # ### Fake Measurements
@@ -310,8 +421,29 @@ np.save("tuningMatricesM", tuningMatricesM)
 # In[ ]:
 
 
-tuningVals = np.load("tuningVals.npy")
-tuningMatricesM = np.load("tuningMatricesM.npy")
+tuningVals = np.load("tuningVals10.npy")
+tuningMatricesM = np.load("tuningMatricesM10.npy")
+
+
+# In[ ]:
+
+
+def PlotTuningMatrices(tuningMatrices, shape, maxRad):
+    """
+    tuningMatrices.shape => (N*M, n, n)
+    shape = (N, M, n, n)
+    """
+    N, M, n, n = shape
+    tuningMatricesNxN = tuningMatrices.reshape(shape)
+    tuningMatricesNxN_List = [[tuningMatricesNxN[r,c] for c in range(M)] for r in range(N)]
+    tuningMatrices2D = np.block(tuningMatricesNxN_List)
+    plotComplexArray(tuningMatrices2D, maxRad=maxRad)
+
+
+# In[ ]:
+
+
+PlotTuningMatrices(tuningMatricesM, (10, 10, 5, 5), maxRad=2.5)
 
 
 # The simulation builder `BuildNewNetwork` requires that we supply it with two functions, one which creates an RF network object from of a 5-way splitter, and another which creates one of the Multiplier.  We will assume that the splitter is generic and employ a simple theoretical model for that which was imported from our `NetworkBuilding` theoretical simulation notebook.  However, for the Multiplier, we will use the `MultiplierBank` and the `loc` code to extract the model for a multiplier assigned to that specific location in the network. 
@@ -363,7 +495,7 @@ tuningMatricesS = np.array(tuningMatricesS)
 # In[ ]:
 
 
-tuningMatricesS;
+PlotTuningMatrices(tuningMatricesS, (10, 10, 5, 5), maxRad=2.5)
 
 
 # Ideally, this would yield the exact same network scattering matrices as were measured and contained in `tuningMatricesM`.  Of course they won't because each physical device has its own personality and other factors such as varying cable lengths.  We will therefore optimize the PCA weights of each device in simulation in an attempt to create collection of devices which match the real behavior of the experimental devices.
@@ -390,19 +522,27 @@ def fun(X):
         tuningMatricesS.append(m)
     tuningMatricesS = np.array(tuningMatricesS)
     error = np.sum(np.abs(tuningMatricesS - tuningMatricesM)**2)
+    print(error)
     return error
 
 
 # In[ ]:
 
 
-fit = sp.optimize.minimize(fun, X0, method='Nelder-Mead', options={'disp':True})
+fit = sp.optimize.minimize(fun, X0, method='Powell', 
+                           options={'disp':True, 'adaptive':True, 'fatol':0.01})
 
 
 # In[ ]:
 
 
-XF = fit.x
+XF = multBank.getPersonalityVectors()
+
+
+# In[ ]:
+
+
+# XF = fit.x
 
 
 # Error when multipliers are the uniform average all devices measured in the PCA:
@@ -425,6 +565,93 @@ fun(XF)
 
 
 multBank.setPersonalityVectors(XF)
+
+
+# In[ ]:
+
+
+tuningMatricesS = []
+for (psVal, vgaVal) in tuningVals:
+    multBank.setAllMults(psVal, vgaVal)
+    newNet = BuildNewNetwork(SplitterBuilder, MultBuilder, loc="N", n=5)
+    m = newNet.s[0, 5:, :5]
+    tuningMatricesS.append(m)
+tuningMatricesS = np.array(tuningMatricesS)
+
+
+# In[ ]:
+
+
+PlotTuningMatrices(tuningMatricesS, (10, 10, 5, 5), maxRad=2.5)
+
+
+# In[ ]:
+
+
+np.save("personalityVector", XF)
+
+
+# # Set and Measure a Matrix
+
+# In[ ]:
+
+
+def calcNewMatrixSettings(K, multBank, n):
+    expK = []
+    for i_out in range(n):
+        expRow = []
+        for i_in in range(n):
+            loc = ('M', 'N', i_in, i_out)
+            mult = multBank.getMultByLoc(loc)
+            T = K[i_out, i_in]
+            mult.setT(T)
+            Texp = mult.TExpected
+            expRow.append(Texp)
+        expK.append(expRow)
+    expK = np.array(expK)
+    print(expK)
+
+
+# In[ ]:
+
+
+def setExpMultBank(exp, multBank):
+    physNums = multBank.getPhysNums()
+    psSettings = [multBank.getMultByPhysNum(physNum).psSetting for physNum in physNums]
+    vgaSettings = [multBank.getMultByPhysNum(physNum).vgaSetting for physNum in physNums]
+    exp.setMults(psSettings, vgaSettings, physNums)
+
+
+# In[ ]:
+
+
+XF = np.load("personalityVector.npy")
+multBank.setPersonalityVectors(XF)
+
+
+# In[ ]:
+
+
+K = np.full((5,5), fill_value=(0.2 + 0.3j))
+K
+
+
+# In[ ]:
+
+
+calcNewMatrixSettings(K, multBank, 5)
+
+
+# In[ ]:
+
+
+setExpMultBank(exp, multBank)
+
+
+# In[ ]:
+
+
+m, std = exp.measureSMatrix(delay=2)
 
 
 # # Scrap
