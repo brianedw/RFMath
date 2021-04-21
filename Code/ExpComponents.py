@@ -541,7 +541,7 @@ setattr(MultiplierBank, "getMults", getMults)
 
 
 def getMultByPhysNum(self, pNum):
-    return self.bankByLoc
+    return self.bankByPhysNum[pNum]
 
 setattr(MultiplierBank, "getMultByPhysNum", getMultByPhysNum)
 
@@ -595,6 +595,16 @@ def getPersonalityVectors(self):
     return weights1DReal
 
 setattr(MultiplierBank, "getPersonalityVectors", getPersonalityVectors)
+
+
+# In[ ]:
+
+
+def setAllMults(self, psVal, vgaVal):
+    for mult in self.getMults():
+        mult.setSettings(psVal, vgaVal)
+        
+setattr(MultiplierBank, "setAllMults", setAllMults)        
 
 
 # In[ ]:
