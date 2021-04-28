@@ -26,11 +26,11 @@
 int portMap[8] = {1, 2, 3, 4, 5, 6, 7, 8};
 
 void setOutputs(int meshPort){
-  // Sets the switch port.  `meshPort` expected to be in the range [1-5].
-  if(meshPort<1 || meshPort>5){
+  // Sets the switch port.  `meshPort` expected to be in the range [1-8].
+  if(meshPort<1 || meshPort>8){
     Serial.print("Meshport ");
     Serial.print(meshPort);
-    Serial.println(" is not in the range [1,5].");
+    Serial.println(" is not in the range [1,8].");
     Serial.println();
     return;
   }
