@@ -51,7 +51,7 @@ deg = 2*pi/360
 # - create functions (Network Combiners) which can glue these networks together in trivial configurations.
 # - create functions (Network Builders) which use generators and combiners to create and assmebled complex networks such as the Miller Archicture.
 # 
-# There is a rather subtle point here.  The Network Builders are designed using a Functional paradigm.  The Network Builders are designed to take "functions" as their inputs, which will either retrieve an existing smaller network model or generate a new one.  This provides a tremendous amount of flexibility as these functions could potentially be referencing an evolving model of an experiment, generating Monte-Carlo style variates, or just generating the nominal devices for checking of correctness.  The argument which is supplied to these functions is a location tag which designates what kind of element it is and where it is located within the network.  The function can then do with that tag what it wishes.
+# There is a rather subtle point here.  The Network Builders are designed using a Functional paradigm.  The Network Builders are designed to take "functions" as their inputs, which will either retrieve an existing smaller network model or generate a new one.  This provides a tremendous amount of flexibility as these functions could potentially be referencing an evolving model of an experiment, generating Monte-Carlo style variates, or just generating the nominal devices for checking of correctness.  The argument which is supplied to these functions is a location tag which designates what kind of element it is and where it is located within the network.  The function can then do with that tag what it wishes as long as it returns an appropriately sized network.
 # 
 # Several examples are given within this notebook for trivial generators that show correctness and the use cases are expanded upon later.
 # 
@@ -1124,20 +1124,20 @@ def ConvertSToTc(sTerms):
 # In[ ]:
 
 
-def ConvertSToPhTrDict(sTerms, loc):
-    """
-    Converts an MZI S vector with shape (NN) to multiplier 
-    PT (ie Phase-Transmission) array with shape (NN, 2)  where 
-    PT[2] = (p, t) is the phase and transmission of the third multiplier.
-    """
-    NN = sTerms.shape[0]
-    PhTr = np.zeros(shape=(NN, 2))
-    for i in range(NN):
-        Ph = 0.
-        Tr = sTerms[i]
-        PhTr[i, 0] = Ph
-        PhTr[i, 1] = Tr
-    return PT
+# def ConvertSToPhTrDict(sTerms, loc):
+#     """
+#     Converts an MZI S vector with shape (NN) to multiplier 
+#     PT (ie Phase-Transmission) array with shape (NN, 2)  where 
+#     PT[2] = (p, t) is the phase and transmission of the third multiplier.
+#     """
+#     NN = sTerms.shape[0]
+#     PhTr = np.zeros(shape=(NN, 2))
+#     for i in range(NN):
+#         Ph = 0.
+#         Tr = sTerms[i]
+#         PhTr[i, 0] = Ph
+#         PhTr[i, 1] = Tr
+#     return PT
 
 
 # # Tests

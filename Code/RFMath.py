@@ -250,6 +250,12 @@ for loc in allMultLocs:
 
 # Note that passive devices such as 5:1 Splitters are not modeled to the same degree and do not require controlling.  Therefore, we will generate generic elements as we need them.
 
+# In[ ]:
+
+
+X0 = multBank.getPersonalityVectors()
+
+
 # ## Tuning
 
 # ### Debugging
@@ -271,7 +277,7 @@ for loc in allMultLocs:
 
 outIndex = 5
 inIndex = 3
-vga, ps = (1000, 0)
+vga, ps = (1000, 100)
 loc = ('M', 'N', inIndex-1, outIndex-1) # ('M', 'N', in, out) :(.
 mult = multBank.getMultByLoc(loc)
 physNum = mult.physNumber
@@ -292,7 +298,29 @@ multBankComm.setMult(28, 100, 200)
 # In[ ]:
 
 
-inputSwitchComm.setSwitch(3)
+# inputSwitchComm.portAliases=None
+# outputSwitchComm.portAliases=None
+
+
+# In[ ]:
+
+
+inputSwitchComm.setSwitch(1, verbose=True)
+outputSwitchComm.setSwitch(1, verbose=True)
+exp.vnaComm.getS21AllAt45()
+
+
+# In[ ]:
+
+
+inputSwitchComm.close()
+outputSwitchComm.close()
+
+
+# In[ ]:
+
+
+outputSwitchComm.setSwitch("test")
 
 
 # In[ ]:
@@ -421,8 +449,8 @@ np.save("tuningMatricesM", tuningMatricesM)
 # In[ ]:
 
 
-tuningVals = np.load("tuningVals10.npy")
-tuningMatricesM = np.load("tuningMatricesM10.npy")
+tuningVals = np.load("tuningVals10_v2.npy")
+tuningMatricesM = np.load("tuningMatricesM10_v2.npy")
 
 
 # In[ ]:
@@ -443,7 +471,19 @@ def PlotTuningMatrices(tuningMatrices, shape, maxRad):
 # In[ ]:
 
 
-PlotTuningMatrices(tuningMatricesM, (10, 10, 5, 5), maxRad=2.5)
+tuningVals[-1]
+
+
+# In[ ]:
+
+
+tuningMatricesM[-1]
+
+
+# In[ ]:
+
+
+PlotTuningMatrices(tuningMatricesM, (10, 10, 5, 5), maxRad=1.5)
 
 
 # The simulation builder `BuildNewNetwork` requires that we supply it with two functions, one which creates an RF network object from of a 5-way splitter, and another which creates one of the Multiplier.  We will assume that the splitter is generic and employ a simple theoretical model for that which was imported from our `NetworkBuilding` theoretical simulation notebook.  However, for the Multiplier, we will use the `MultiplierBank` and the `loc` code to extract the model for a multiplier assigned to that specific location in the network. 
@@ -588,7 +628,7 @@ PlotTuningMatrices(tuningMatricesS, (10, 10, 5, 5), maxRad=2.5)
 # In[ ]:
 
 
-np.save("personalityVector", XF)
+np.save("personalityVector_v2", XF)
 
 
 # # Set and Measure a Matrix
@@ -603,7 +643,7 @@ def calcNewMatrixSettings(K, multBank, n):
         for i_in in range(n):
             loc = ('M', 'N', i_in, i_out)
             mult = multBank.getMultByLoc(loc)
-            T = K[i_out, i_in]
+            T = 5*K[i_out, i_in]
             mult.setT(T)
             Texp = mult.TExpected
             expRow.append(Texp)
@@ -626,13 +666,18 @@ def setExpMultBank(exp, multBank):
 
 
 XF = np.load("personalityVector.npy")
+
+
+# In[ ]:
+
+
 multBank.setPersonalityVectors(XF)
 
 
 # In[ ]:
 
 
-K = np.full((5,5), fill_value=(0.2 + 0.3j))
+K = np.full((5,5), fill_value=(0.5+.5j))
 K
 
 
@@ -645,6 +690,26 @@ calcNewMatrixSettings(K, multBank, 5)
 # In[ ]:
 
 
+multPhysNumberBank
+
+
+# In[ ]:
+
+
+testMult = multBank.getMultByPhysNum(31)
+
+
+# In[ ]:
+
+
+(testMult.TExpected,
+ testMult.vgaSetting,
+ testMult.psSetting)
+
+
+# In[ ]:
+
+
 setExpMultBank(exp, multBank)
 
 
@@ -652,6 +717,44 @@ setExpMultBank(exp, multBank)
 
 
 m, std = exp.measureSMatrix(delay=2)
+
+
+# In[ ]:
+
+
+mNew = m
+mNew
+
+
+# In[ ]:
+
+
+np.abs(mNew - K)
+
+
+# In[ ]:
+
+
+plotData = np.hstack((K,mOld,mNew))
+
+
+# In[ ]:
+
+
+plotComplexArray(plotData, maxRad=1)
+
+
+# In[ ]:
+
+
+mOld = m
+mOld
+
+
+# In[ ]:
+
+
+np.abs(K)
 
 
 # # Scrap
