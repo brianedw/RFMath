@@ -342,9 +342,9 @@ def dumbRoot2D(F, start, bounds, target, verbose=False):
             offsets = offsets0
         posSet.add(tuple(pos))
     if onEdge(pos):
-        raise ValueError("   Optimal soln found on edge.  Not trusting it.")
+        print("   Optimal soln found on edge.  Not trusting it.")
     if bestScore > 0.02:
-        raise ValueError("   Optimal soln wasn't very good.  Not trusting it.")
+        print("   Optimal soln wasn't very good.  Not trusting it.")
     return (pos, bestScore)
 
 
