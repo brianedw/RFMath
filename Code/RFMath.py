@@ -118,7 +118,8 @@ from Miller import (MillerBuilder)
 # In[ ]:
 
 
-from UtilityMath import (convertArrayToDict, MatrixError, MatrixSqError, makePolarPlot, addMatrixDiff, PolarPlot, ReIm)
+from UtilityMath import (convertArrayToDict, MatrixError, MatrixSqError, makePolarPlot, addMatrixDiff, PolarPlot, ReIm, 
+                         RandomComplexCircularMatrix, PolarPlot)
 
 
 # In[ ]:
@@ -157,37 +158,10 @@ multBankComm = MultBankComm(comValue='COM5')
 # In[ ]:
 
 
-# inputSwitchComm.setSwitch("test", verbose=True)
-
-
-# In[ ]:
-
-
-# outputSwitchComm.setSwitch("test", verbose=True)
-
-
-# In[ ]:
-
-
 exp = ExperimentalSetup(inputSwitchComm, outputSwitchComm, multBankComm, vnaComm)
 
 
-# In[ ]:
-
-
-# switchCommIn = SwitchComm(comValue='COM1', {1:6, 2:5, 3:4, 4:3, 5:2})
-# switchCommOut = SwitchComm(comValue='COM2', {1:2, 2:3, 3:4, 4:5, 5:6})
-# vnaComm = VNAComm()
-# multBankCom = MultBankComm(comValue='COM3')
-
-
 # For convenience, higher level scripts that require coordination between the various devices can be accessed using an `ExperimentalSetup`.
-
-# In[ ]:
-
-
-# exp = ExperimentalSetup(switchCommIn, switchCommOut, vnaComm, multBankCom)
-
 
 # ## Definitions (Sim)
 
@@ -354,8 +328,8 @@ np.abs(SMat)
 # In[ ]:
 
 
-tuningPSVals = np.linspace(0, 1023, 10, dtype=np.int)
-tuningVGAVals = np.linspace(0, 1023, 10, dtype=np.int)
+tuningPSVals = np.linspace(0, 1023, 20, dtype=np.int)
+tuningVGAVals = np.linspace(0, 1023, 20, dtype=np.int)
 
 
 # In[ ]:
@@ -381,8 +355,8 @@ tuningMatricesM = np.array(tuningMatricesM)
 # In[ ]:
 
 
-np.save("tuningVals10", tuningVals)
-np.save("tuningMatricesM10", tuningMatricesM)
+np.save("tuningVals20", tuningVals)
+np.save("tuningMatricesM20", tuningMatricesM)
 
 
 # ### Fake Measurements
@@ -449,8 +423,8 @@ np.save("tuningMatricesM", tuningMatricesM)
 # In[ ]:
 
 
-tuningVals = np.load("tuningVals10_v2.npy")
-tuningMatricesM = np.load("tuningMatricesM10_v2.npy")
+tuningVals = np.load("tuningVals20.npy")
+tuningMatricesM = np.load("tuningMatricesM20.npy")
 
 
 # In[ ]:
@@ -483,7 +457,7 @@ tuningMatricesM[-1]
 # In[ ]:
 
 
-PlotTuningMatrices(tuningMatricesM, (10, 10, 5, 5), maxRad=1.5)
+PlotTuningMatrices(tuningMatricesM, (20, 20, 5, 5), maxRad=1.5)
 
 
 # The simulation builder `BuildNewNetwork` requires that we supply it with two functions, one which creates an RF network object from of a 5-way splitter, and another which creates one of the Multiplier.  We will assume that the splitter is generic and employ a simple theoretical model for that which was imported from our `NetworkBuilding` theoretical simulation notebook.  However, for the Multiplier, we will use the `MultiplierBank` and the `loc` code to extract the model for a multiplier assigned to that specific location in the network. 
@@ -535,7 +509,20 @@ tuningMatricesS = np.array(tuningMatricesS)
 # In[ ]:
 
 
-PlotTuningMatrices(tuningMatricesS, (10, 10, 5, 5), maxRad=2.5)
+PlotTuningMatrices(tuningMatricesS, (20, 20, 5, 5), maxRad=2.5)
+
+
+# In[ ]:
+
+
+PlotTuningMatrices(tuningMatricesM/tuningMatricesS,(20, 20, 5, 5), maxRad=1.5)
+
+
+# In[ ]:
+
+
+grossCorrFact = np.mean(tuningMatricesM/tuningMatricesS)
+grossCorrFact
 
 
 # Ideally, this would yield the exact same network scattering matrices as were measured and contained in `tuningMatricesM`.  Of course they won't because each physical device has its own personality and other factors such as varying cable lengths.  We will therefore optimize the PCA weights of each device in simulation in an attempt to create collection of devices which match the real behavior of the experimental devices.
@@ -546,7 +533,13 @@ PlotTuningMatrices(tuningMatricesS, (10, 10, 5, 5), maxRad=2.5)
 # In[ ]:
 
 
-X0 = multBank.getPersonalityVectors()
+X1 = (grossCorrFact*X0.view('complex')).view('float')
+
+
+# In[ ]:
+
+
+# X0 = multBank.getPersonalityVectors()  # Defined at definition of multBank
 
 
 # In[ ]:
@@ -569,7 +562,19 @@ def fun(X):
 # In[ ]:
 
 
-fit = sp.optimize.minimize(fun, X0, method='Powell', 
+fun(X0)
+
+
+# In[ ]:
+
+
+fun(X1)
+
+
+# In[ ]:
+
+
+fit = sp.optimize.minimize(fun, X1, method='Powell', 
                            options={'disp':True, 'adaptive':True, 'fatol':0.01})
 
 
@@ -586,12 +591,6 @@ XF = multBank.getPersonalityVectors()
 
 
 # Error when multipliers are the uniform average all devices measured in the PCA:
-
-# In[ ]:
-
-
-fun(X0)
-
 
 # Error following fitting the PCA weights:
 
@@ -622,13 +621,13 @@ tuningMatricesS = np.array(tuningMatricesS)
 # In[ ]:
 
 
-PlotTuningMatrices(tuningMatricesS, (10, 10, 5, 5), maxRad=2.5)
+PlotTuningMatrices(tuningMatricesS, (20, 20, 5, 5), maxRad=2.5)
 
 
 # In[ ]:
 
 
-np.save("personalityVector_v2", XF)
+np.save("personalityVector_v3", XF)
 
 
 # # Set and Measure a Matrix
@@ -649,7 +648,7 @@ def calcNewMatrixSettings(K, multBank, n):
             expRow.append(Texp)
         expK.append(expRow)
     expK = np.array(expK)
-    print(expK)
+    return (expK/n)
 
 
 # In[ ]:
@@ -665,7 +664,7 @@ def setExpMultBank(exp, multBank):
 # In[ ]:
 
 
-XF = np.load("personalityVector.npy")
+XF = np.load("personalityVector_v2.npy")
 
 
 # In[ ]:
@@ -674,203 +673,237 @@ XF = np.load("personalityVector.npy")
 multBank.setPersonalityVectors(XF)
 
 
-# In[ ]:
-
-
-K = np.full((5,5), fill_value=(0.5+.5j))
-K
-
+# ## Compare Current System to Tuning Matrices
 
 # In[ ]:
 
 
-calcNewMatrixSettings(K, multBank, 5)
+tuningVals = np.load("tuningVals10_v2.npy")
+tuningMatricesM = np.load("tuningMatricesM10_v2.npy")
 
 
 # In[ ]:
 
 
-multPhysNumberBank
+testCase = 55
 
 
 # In[ ]:
 
 
-testMult = multBank.getMultByPhysNum(31)
+tuningVals[testCase]
 
 
 # In[ ]:
 
 
-(testMult.TExpected,
- testMult.vgaSetting,
- testMult.psSetting)
+(psVal, vgaVal) = tuningVals[testCase]
+multBank.setAllMults(psVal, vgaVal)
+setExpMultBank(exp, multBank)
+m, std = exp.measureSMatrix(delay=2)
+print(m)
+
+
+# In[ ]:
+
+
+oldM = tuningMatricesM[testCase]
+
+
+# In[ ]:
+
+
+abs(m - oldM)
+
+
+# In[ ]:
+
+
+tempComp = np.sum(m/oldM)/25
+
+
+# In[ ]:
+
+
+tempComp
+
+
+# ## Inversion Experiment
+
+# In[ ]:
+
+
+KMidRange = np.full((5,5), fill_value=(-.25+.75j)/5)
+
+
+# In[ ]:
+
+
+RandomComplexCircularMatrix(0.5, (5,5))
+
+
+# In[ ]:
+
+
+KRand1 = np.array([[-0.395-0.074j,  0.002+0.214j, -0.174+0.235j,  0.456-0.18j , -0.383+0.171j],
+                   [-0.461-0.019j, -0.075+0.19j , -0.251+0.301j, -0.132+0.09j , -0.225+0.013j],
+                   [-0.409-0.236j, -0.124+0.037j,  0.103+0.197j, -0.436+0.241j, -0.05 +0.148j],
+                   [ 0.025-0.064j, -0.183-0.198j, -0.075-0.225j, -0.014+0.166j, -0.053+0.174j],
+                   [ 0.373+0.042j, -0.014+0.05j ,  0.034+0.392j,  0.195+0.178j,  0.005-0.079j]])
+np.sort(abs(np.linalg.eigvals(KRand1)))[::-1]
+
+
+# In[ ]:
+
+
+KRand2 = np.array([[ 0.226+0.27j ,  0.142-0.411j, -0.205-0.386j,  0.146-0.415j,  0.252-0.283j],
+                   [-0.383-0.102j,  0.123-0.095j,  0.316-0.183j, -0.422-0.19j ,  0.041+0.079j],
+                   [-0.141-0.071j, -0.391+0.113j,  0.065-0.305j,  0.028+0.169j,  0.168+0.385j],
+                   [ 0.094-0.225j,  0.21 -0.059j, -0.108+0.427j, -0.139-0.241j,  0.22 +0.272j],
+                   [ 0.464-0.107j,  0.446+0.202j, -0.259-0.406j,  0.236-0.308j, -0.005-0.28j ]])
+np.sort(abs(np.linalg.eigvals(KRand2)))[::-1]
+
+
+# In[ ]:
+
+
+K = KRand2
+expName = 'trial3_'
+
+
+# In[ ]:
+
+
+KHWExp = calcNewMatrixSettings(K, multBank, 5)
+print(KHWExp)
+
+
+# In[ ]:
+
+
+np.save(expName+"goalK",K)
+np.save(expName+"KHWExp", KHWExp)
 
 
 # In[ ]:
 
 
 setExpMultBank(exp, multBank)
-
-
-# In[ ]:
-
-
 m, std = exp.measureSMatrix(delay=2)
 
 
 # In[ ]:
 
 
-mNew = m
-mNew
+plotComplexArray(m, maxRad=np.max(np.abs(m)))
 
 
 # In[ ]:
 
 
-np.abs(mNew - K)
+# np.save(expName+"measK", m)
+np.save(expName+"measKInv", m)
 
 
 # In[ ]:
 
 
-plotData = np.hstack((K,mOld,mNew))
+spr = np.array([5*[0]]).T
 
 
 # In[ ]:
 
 
-plotComplexArray(plotData, maxRad=1)
+plotData = np.hstack((K, spr, KHWExp, spr, m))
+plotComplexArray(plotData, maxRad=0.1)
+
+
+# ## Post Processing
+
+# In[ ]:
+
+
+expName = 'trial1_'
 
 
 # In[ ]:
 
 
-mOld = m
-mOld
+K_goal = np.load(expName+'goalK.npy')
+K_HWExp = np.load(expName+'KHWExp.npy')
+K_meas = np.load(expName+'measK.npy')
+K_measInv = np.load(expName+'measKInv.npy')
 
 
 # In[ ]:
 
 
-np.abs(K)
-
-
-# # Scrap
-
-# In[ ]:
-
-
-tuningMatricesS = []
-for (psVal, vgaVal) in tuningVals:
-    multBank.setAllMults(psVal, vgaVal)
-    newNet = BuildNewNetwork(SplitterBuilder, MultBuilder, loc="N", n=5)
-    m = newNet.s[0, 5:, :5]
-    tuningMatricesS.append(m)
-tuningMatricesS = np.array(tuningMatricesS)
-
-tuningMatricesS - 
+plotData = np.hstack((K_goal, spr, K_HWExp, spr, K_meas))
+maxVal = np.max(np.abs(plotData))
+print(maxVal)
+plotComplexArray(plotData, maxRad=maxVal)
 
 
 # In[ ]:
 
 
-physMatrices = []
-for (psVal, vgaVal) in tuningVals:
-    SetAllSimMults(psVal, vgaVal, multBank)
-    time.sleep(1)
-    m = MeasurePhysMatrix(5, inSwitchComm, outSwitchComm, vnaComm, delay=0)
-    physMatrices.append(m)
+pp = PolarPlot("Big Kappa")
+pp.addMatrixDiff(K_goal, K_meas)
+# pp.addMatrixDiff(K_goal, K_HWExp)
+# pp.addMatrix(K_goal, color='green')
+# pp.addMatrix(K_HWExp, color='cyan')
+# pp.addMatrix(K_meas, color='red')
+pp.show()
 
 
 # In[ ]:
 
 
-for loc in multBank.getLocs():
-    mult = multBank.getMultByLoc(loc)
-    mult.setSettings(psSetting, vgaSetting)
+coup1 = np.loadtxt("../GoldenSamples/FeedbackCouplerSamples/coupler_1.txt", dtype=np.complex)
+coup2 = np.loadtxt("../GoldenSamples/FeedbackCouplerSamples/coupler_1_v2.txt", dtype=np.complex)
+alpha1 = np.mean([coup1[0,0], coup2[0,0]])
+alpha2 = np.mean([coup1[1,1], coup2[1,1]])
+beta = np.mean([coup1[0,1], coup1[1,0], coup2[0,1], coup2[1,0]])
 
 
 # In[ ]:
 
 
-mult = multBank.getMultByLoc(loc)
-mult.setSettings(psSetting=0, vgaSetting=0)
+K_goal_inv = np.linalg.inv(np.identity(5)-K_goal)
+K_exp1_inv = np.linalg.inv(np.identity(5)-K_HWExp)
+K_exp2_inv = np.linalg.inv(np.identity(5)-K_meas)
+K_meas_inv = (alpha1/beta*K_measInv+(beta-alpha1*alpha2/beta)*np.identity(5))/beta;
 
 
 # In[ ]:
 
 
-SplitterBuilder(("Sin", 0, 0))
+np.mean(abs(K_goal_inv-K_meas_inv))
 
 
 # In[ ]:
 
 
-MultBuilder(("M", "X", 0, 0))
+plotData = np.hstack((K_goal_inv, spr, K_exp1_inv, spr, K_exp2_inv, spr, K_meas_inv))
+maxV = np.max(np.abs(plotData))
+print(maxV)
+plotComplexArray(plotData, maxRad=maxV)
 
 
 # In[ ]:
 
 
-np.allclose(T, Ks)
+pp = PolarPlot("Inverse")
+pp.addMatrixDiff(K_goal_inv, K_meas_inv)
+# pp.addMatrixDiff(K_goal, K_HWExp)
+# pp.addMatrix(K_goal, color='green')
+# pp.addMatrix(K_HWExp, color='cyan')
+# pp.addMatrix(K_meas, color='red')
+pp.show()
 
 
 # In[ ]:
 
 
-freq = rf.Frequency(start=45, stop=45, npoints=1, unit='mhz', sweep_type='lin')
 
-
-# In[ ]:
-
-
-def SplitterBuilder(loc):
-    return Build5PortSplitter(freq, loc=loc)
-
-
-# In[ ]:
-
-
-SplitterBuilder(("Sin", 0, 0))
-
-
-# In[ ]:
-
-
-def MultBuilder(loc):
-    (_, locParent, i_in, i_out) = loc
-    Tc = Ks[i_out, i_in] * np.sqrt(5)**2
-    return BuildMultiplier(Tc, freq, loc)
-
-
-# In[ ]:
-
-
-MultBuilder(("M", "X", 0, 0))
-
-
-# In[ ]:
-
-
-newNet = BuildNewNetwork(SplitterBuilder, MultBuilder, loc="X", n=5)
-T = newNet.s[0, 5:, :5]
-T
-
-
-# In[ ]:
-
-
-np.allclose(T, Ks)
-
-
-# In[ ]:
-
-
-Ks = np.array([[-0.05+0.06j, -0.  -0.13j, -0.07-0.15j,  0.11+0.28j, -0.05-0.18j],
-               [-0.1 -0.19j, -0.3 -0.05j, -0.28+0.07j, -0.25+0.28j, -0.11-0.29j],
-               [ 0.21-0.18j, -0.08-0.14j,  0.03+0.2j , -0.23+0.24j, -0.06+0.32j],
-               [-0.29-0.31j,  0.12+0.09j,  0.08-0.02j,  0.31+0.12j, -0.22-0.18j],
-               [-0.18-0.06j,  0.08-0.21j,  0.25-0.18j, -0.26-0.1j ,  0.13+0.1j ]])
 
