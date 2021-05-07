@@ -739,7 +739,7 @@ KMidRange = np.full((5,5), fill_value=(-.25+.75j)/5)
 # In[ ]:
 
 
-RandomComplexCircularMatrix(0.5, (5,5))
+RandomComplexCircularMatrix(0.5, (5,5));
 
 
 # In[ ]:
@@ -902,8 +902,28 @@ pp.addMatrixDiff(K_goal_inv, K_meas_inv)
 pp.show()
 
 
+# ## Large Number Experiments
+
 # In[ ]:
 
 
+inputKernels = [RandomComplexCircularMatrix(1.0, (5,5)) for i in range(100)]
 
+
+# In[ ]:
+
+
+data = []
+for inK in inputKernels:
+    setK = calcNewMatrixSettings(inK, multBank, 5)
+    setExpMultBank(exp, multBank)
+    measK, std = exp.measureSMatrix(delay=2)
+    saveData = (inK, setK, measK)
+    outputMeasurements.append(saveData)    
+
+
+# In[ ]:
+
+
+np.save("largeNOpenLoop", np.array(data))
 
