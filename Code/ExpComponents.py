@@ -41,6 +41,12 @@ import PIL
 # In[ ]:
 
 
+from skimage.transform import resize
+
+
+# In[ ]:
+
+
 from scipy.ndimage import gaussian_filter
 from scipy import interpolate
 
@@ -113,7 +119,7 @@ pcaComps = 4
 # In[ ]:
 
 
-dataSetList = [np.loadtxt(fNames, dtype=np.complex) for fNames in fNames94x94]
+dataSetList = [np.loadtxt(fNames, dtype=np.complex128) for fNames in fNames94x94]
 dataSetRough = np.array(dataSetList)
 print("dataSetRough.shape", dataSetRough.shape)
 
@@ -136,8 +142,20 @@ baseWeights
 # In[ ]:
 
 
+baseWeights.tolist()
+
+
+# In[ ]:
+
+
 vgaSamplePoints = np.loadtxt('..\\GoldenSamples\\MultiplierSamples\\1_94by94Nv.txt')[0]
 psSamplePoints  = np.loadtxt('..\\GoldenSamples\\MultiplierSamples\\1_94by94Nv.txt')[0]
+
+
+# In[ ]:
+
+
+
 
 
 # In[ ]:
@@ -152,13 +170,20 @@ dataBounds
 
 if mainQ:
     for i in range(pcaComps):
-        plotComplexArray(comps[i], maxRad=.05)
+        plotComplexArray(comps[i], maxRad=.05, centerColor='black')
 
 
 # In[ ]:
 
 
-if mainQ: plotComplexArray(np.sum(comps * baseWeights.reshape(-1,1,1), axis=0), maxRad=1)
+np.max(np.abs(np.sum(comps * baseWeights.reshape(-1, 1, 1), axis=0)))
+
+
+# In[ ]:
+
+
+if mainQ:
+    plotComplexArray(np.sum(comps * baseWeights.reshape(-1, 1, 1), axis=0), maxRad=7.6, centerColor='black')
 
 
 # ## Define Element
@@ -199,12 +224,14 @@ def __init__(self, physNumber=0, loc=(), freq=45e6):
     self.physNumber = physNumber      # The number assigned to the mult used for comms.
     self.weights = np.zeros_like(baseWeights)               # the proportion of the various PCA components
     self.field = None                 # the response of the multiplier as sparsely sampled array
+    self.fieldD = None                # the response of the multiplier as sparsely sampled array
     self.F = None                     # A function such that F(psSetting, vgaSetting) -> Tr + 1j*Ti
     self.vgaSetting = 512               # The VGA setting [0-1023]
     self.psSetting = 512                # The Phase Shifter setting [0-1023]
     self.TExpected = 0+0j             # The expected transmission coefficient.
     self.setWeights(baseWeights)
     self.setT(1+0j)
+
 
 setattr(Multiplier, "__init__", __init__)
 
@@ -223,6 +250,7 @@ def getRFNetwork(self):
     net = rf.Network(name=str(self.loc), frequency=freq, z0=50, s=S)
     return net
 
+
 setattr(Multiplier, "getRFNetwork", getRFNetwork)
 
 
@@ -236,7 +264,8 @@ def setSettings(self, psSetting, vgaSetting):
     self.psSetting = psSetting
     self.vgaSetting = vgaSetting
     self.TExpected = self.F(psSetting, vgaSetting)
-    
+
+
 setattr(Multiplier, "setSettings", setSettings)
 
 
@@ -263,7 +292,7 @@ setattr(Multiplier, "setSettings", setSettings)
 #     (ps, vga) = np.round(soln['x']).astype(np.int)
 #     self.psSetting = ps
 #     self.vgaSetting = vga
-    
+
 # setattr(Multiplier, "setT", setT)
 
 
@@ -289,6 +318,32 @@ def dumbRoot2D(F, start, bounds, target):
     if bestScore > 0.02:
         raise ValueError("Optimal soln wasn't very good.  Not trusting it.")
     return (pos, bestScore)
+
+
+# In[ ]:
+
+
+def UpResComplexData(data2DCompex, scalingFactor):
+    """
+    This will return a complex valued numpy array that is of increase
+    resolution using only interpolation.
+
+    It is assumed that the original data was taken on evenly spaced points and
+    that then end points are included in the original data.  It then fills in
+    the values between the measured points.
+
+    This function requires that the scalingFactor be odd based on its
+    implementation.
+    """
+    if scalingFactor % 2 == 0:
+        raise ValueError("`scalingFactor` expected to be odd")
+    edgeTrim = (scalingFactor - 1)//2
+    origShape = np.array(data2DCompex.shape)
+    newShape = scalingFactor*origShape
+    bigDataReal = resize(np.real(data2DCompex), newShape, order=1)
+    bigDataImag = resize(np.imag(data2DCompex), newShape, order=1)
+    bigData = (bigDataReal + 1j*bigDataImag)[edgeTrim:-edgeTrim, edgeTrim:-edgeTrim]
+    return bigData
 
 
 # In[ ]:
@@ -342,49 +397,142 @@ def dumbRoot2D(F, start, bounds, target, verbose=False):
             offsets = offsets0
         posSet.add(tuple(pos))
     if onEdge(pos):
-        print("   Optimal soln found on edge.  Not trusting it.")
+        raise ValueError("   Optimal soln found on edge.  Not trusting it.")
     if bestScore > 0.02:
-        print("   Optimal soln wasn't very good.  Not trusting it.")
+        raise ValueError("   Optimal soln wasn't very good.  Not trusting it.")
     return (pos, bestScore)
 
 
 # In[ ]:
 
 
-def setT(self, T, verbose=False):
+def findNearestIndices(target, dataArray):
+    errors = np.abs(target-dataArray)**2
+    r, c = np.unravel_index(np.argmin(errors), errors.shape)
+    return ((r, c), dataArray[r, c])
+
+
+# In[ ]:
+
+
+def setT(self, T, verbose=False, warn=True):
     """
-    Changes the expected T to new value.  Adjusts PS and VGA input to match.  
+    Changes the expected T to new value.  Adjusts PS and VGA input to match.
     Utilizes an inverse function to do so.
     """
-    psSPs, vgaSPs = Multiplier.psSPs, Multiplier.vgaSPs
-    bounds = ((psSPs[0], psSPs[-1]), (vgaSPs[0], vgaSPs[-1]))
-    (pos, bestScore) = dumbRoot2D(self.F, [512, 512], bounds, T, verbose)
-    (ps, vga) = pos
+    (pos, bestScore) = findNearestIndices(T, self.fieldD)
+    (vga, ps) = pos
     self.psSetting = ps
     self.vgaSetting = vga
-    self.TExpected = self.F(ps, vga)
-    
+    TExp = self.fieldD[vga, ps]
+    self.TExpected = TExp
+    expError = abs(T - TExp)**2
+    if warn and (ps in [0, 1023] or vga in [1023] or self.TExpected > 0.02) or verbose:
+        msg = f"T:{T}  --> (VGA, PS):{(vga, ps)}, TExp: {np.round(TExp, 3)}, error: {np.round(expError, 3)}"
+        print(msg)
+
+
 setattr(Multiplier, "setT", setT)
 
 
 # In[ ]:
 
 
-def adjustT(self, T, verbose=False):
-    """
-    Changes the expected T to new value.  Adjusts PS and VGA input to match.  
-    Utilizes an inverse function to do so.
-    """
-    startPos = [self.psSetting, self.vgaSetting]
-    psSPs, vgaSPs = Multiplier.psSPs, Multiplier.vgaSPs
-    bounds = ((psSPs[0], psSPs[-1]), (vgaSPs[0], vgaSPs[-1]))
-    (pos, bestScore) = dumbRoot2D(self.F, startPos, bounds, T, verbose)
-    (ps, vga) = pos
-    self.psSetting = ps
-    self.vgaSetting = vga
-    self.TExpected = self.F(ps, vga)
-    
+# def setT(self, T, verbose=False):
+#     """
+#     Changes the expected T to new value.  Adjusts PS and VGA input to match.  
+#     Utilizes an inverse function to do so.
+#     """
+#     psSPs, vgaSPs = Multiplier.psSPs, Multiplier.vgaSPs
+#     bounds = ((psSPs[0], psSPs[-1]), (vgaSPs[0], vgaSPs[-1]))
+#     (pos, bestScore) = dumbRoot2D(self.F, [512, 512], bounds, T, verbose)
+#     (ps, vga) = pos
+#     self.psSetting = ps
+#     self.vgaSetting = vga
+#     self.TExpected = self.F(ps, vga)
+
+
+# setattr(Multiplier, "setT", setT)
+
+
+# In[ ]:
+
+
+# def adjustT(self, T, verbose=False):
+#     """
+#     Changes the expected T to new value.  Adjusts PS and VGA input to match.  
+#     Utilizes an inverse function to do so.
+#     """
+#     startPos = [self.psSetting, self.vgaSetting]
+#     psSPs, vgaSPs = Multiplier.psSPs, Multiplier.vgaSPs
+#     bounds = ((psSPs[0], psSPs[-1]), (vgaSPs[0], vgaSPs[-1]))
+#     (pos, bestScore) = dumbRoot2D(self.F, startPos, bounds, T, verbose)
+#     (ps, vga) = pos
+#     self.psSetting = ps
+#     self.vgaSetting = vga
+#     self.TExpected = self.F(ps, vga)
+
+
+# setattr(Multiplier, "adjustT", adjustT)
+
+
+# In[ ]:
+
+
+def adjustT(self, T, verbose=False, warn=True):
+    setT(self, T, verbose=False, warn=True)
+
+
 setattr(Multiplier, "adjustT", adjustT)
+
+
+# In[ ]:
+
+
+# def setWeights(self, weights, hold='settings'):
+#     self.weights[:] = weights[:]
+#     self.field = np.sum(comps * weights.reshape(-1, 1, 1), axis=0)
+#     self.fieldD = UpResComplexData(self.field, 11)
+#     rF = interp2d(Multiplier.psSPs, Multiplier.vgaSPs, np.real(self.field), kind='linear', bounds_error=True)
+#     iF = interp2d(Multiplier.psSPs, Multiplier.vgaSPs, np.imag(self.field), kind='linear', bounds_error=True)
+#     def F(x, y):
+#         z, = rF(x, y, assume_sorted=True) + 1j*iF(x, y, assume_sorted=True)
+#         return z
+#     self.F = F
+#     if hold == 'settings':
+#         # Sets settings to orig values, and tweaks T.
+#         self.setSettings(self.psSetting, self.vgaSetting)
+#     elif hold == 'T':
+#         # Sets T to orig values, and tweaks settings.
+#         self.setT(self.T)
+
+# setattr(Multiplier, "setWeights", setWeights)
+
+
+# In[ ]:
+
+
+def UpResComplexData(data2DCompex, scalingFactor):
+    """
+    This will return a complex valued numpy array that is of increase
+    resolution using only interpolation.
+
+    It is assumed that the original data was taken on evenly spaced points and
+    that then end points are included in the original data.  It then fills in
+    the values between the measured points.
+
+    This function requires that the scalingFactor be odd based on its
+    implementation.
+    """
+    if scalingFactor % 2 == 0:
+        raise ValueError("`scalingFactor` expected to be odd")
+    edgeTrim = (scalingFactor - 1)//2
+    origShape = np.array(data2DCompex.shape)
+    newShape = scalingFactor*origShape
+    bigDataReal = resize(np.real(data2DCompex), newShape, order=1)
+    bigDataImag = resize(np.imag(data2DCompex), newShape, order=1)
+    bigData = (bigDataReal + 1j*bigDataImag)[edgeTrim:-edgeTrim, edgeTrim:-edgeTrim]
+    return bigData
 
 
 # In[ ]:
@@ -392,7 +540,8 @@ setattr(Multiplier, "adjustT", adjustT)
 
 def setWeights(self, weights, hold='settings'):
     self.weights[:] = weights[:]
-    self.field = np.sum(comps * weights.reshape(-1,1,1), axis=0)
+    self.field = np.sum(comps * weights.reshape(-1, 1, 1), axis=0)
+    self.fieldD = UpResComplexData(self.field, 11)
     rF = interp2d(Multiplier.psSPs, Multiplier.vgaSPs, np.real(self.field), kind='linear', bounds_error=True)
     iF = interp2d(Multiplier.psSPs, Multiplier.vgaSPs, np.imag(self.field), kind='linear', bounds_error=True)
     def F(x, y):
@@ -454,6 +603,22 @@ m1.TExpected, m1.psSetting, m1.vgaSetting
 
 
 T = -0.3-0.3j
+m1.setT(T)
+m1.TExpected, m1.psSetting, m1.vgaSetting
+
+
+# In[ ]:
+
+
+T = -0.3-0.3j
+m1.setT(T, verbose=True)
+m1.TExpected, m1.psSetting, m1.vgaSetting
+
+
+# In[ ]:
+
+
+T = 100.
 m1.setT(T)
 m1.TExpected, m1.psSetting, m1.vgaSetting
 

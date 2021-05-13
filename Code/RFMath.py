@@ -328,8 +328,14 @@ np.abs(SMat)
 # In[ ]:
 
 
-tuningPSVals = np.linspace(0, 1023, 20, dtype=np.int)
-tuningVGAVals = np.linspace(0, 1023, 20, dtype=np.int)
+tuningPSVals = np.linspace(0, 1023, 20, dtype=np.int64)
+tuningVGAVals = np.linspace(0, 1023, 20, dtype=np.int64)
+
+
+# In[ ]:
+
+
+tuningPSVals
 
 
 # In[ ]:

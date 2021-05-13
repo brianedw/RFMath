@@ -78,16 +78,16 @@ convertArrayToDict(array, drop=1, preSpec=('Alpha', 'Bravo'))
 # In[ ]:
 
 
-def plotComplexArray(array, maxRad=10):
-    pixArray = colorizeComplexArray(array+0.00001j, centerColor='black', maxRad=maxRad)
-    (h,w) = array.shape
-    img = np.zeros((h,w), dtype=np.uint32)
-    view = img.view(dtype=np.uint8).reshape(h,w,4)
-    view[:,:,0] = pixArray[:,:,0]
-    view[:,:,1] = pixArray[:,:,1]
-    view[:,:,2] = pixArray[:,:,2]
-    view[:,:,3] = 255
-    p = figure(x_range=(0,w), y_range=(0,h), plot_width=800, plot_height=800)
+def plotComplexArray(array, maxRad=10, centerColor='black'):
+    pixArray = colorizeComplexArray(array+0.00001j, centerColor=centerColor, maxRad=maxRad)
+    (h, w) = array.shape
+    img = np.zeros((h, w), dtype=np.uint32)
+    view = img.view(dtype=np.uint8).reshape(h, w, 4)
+    view[:, :, 0] = pixArray[:, :, 0]
+    view[:, :, 1] = pixArray[:, :, 1]
+    view[:, :, 2] = pixArray[:, :, 2]
+    view[:, :, 3] = 255
+    p = figure(x_range=(0, w), y_range=(0, h), plot_width=800, plot_height=800)
     p = figure()
     p.image_rgba(image=[img], x=0, y=0, dw=w, dh=h)
     show(p)
@@ -96,8 +96,8 @@ def plotComplexArray(array, maxRad=10):
 # In[ ]:
 
 
-data = np.random.uniform(low=-10, high=10, size=(10,15)) + 1j*np.random.uniform(low=-10, high=10, size=(10,15))
-data[:3,:3] = 0
+data = np.random.uniform(low=-10, high=10, size=(10, 15)) + 1j*np.random.uniform(low=-10, high=10, size=(10, 15))
+data[:3, :3] = 0
 if mainQ: plotComplexArray(data, maxRad=10)
 
 
