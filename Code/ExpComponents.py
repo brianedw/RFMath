@@ -415,7 +415,7 @@ def findNearestIndices(target, dataArray):
 # In[ ]:
 
 
-def setT(self, T, verbose=False, warn=True):
+def setT(self, T, warn=True, verbose=False):
     """
     Changes the expected T to new value.  Adjusts PS and VGA input to match.
     Utilizes an inverse function to do so.
@@ -426,9 +426,9 @@ def setT(self, T, verbose=False, warn=True):
     self.vgaSetting = vga
     TExp = self.fieldD[vga, ps]
     self.TExpected = TExp
-    expError = abs(T - TExp)**2
-    if warn and (ps in [0, 1023] or vga in [1023] or self.TExpected > 0.02) or verbose:
-        msg = f"T:{T}  --> (VGA, PS):{(vga, ps)}, TExp: {np.round(TExp, 3)}, error: {np.round(expError, 3)}"
+    expError = abs(T - TExp)
+    if warn and (vga in [1023] or expError > 0.02) or verbose:
+        msg = f"{self.loc},{self.physNumber} T:{T}  --> (VGA, PS):{(vga, ps)}, TExp: {np.round(TExp, 3)}, error: {np.round(expError, 3)}"
         print(msg)
 
 
@@ -479,8 +479,8 @@ setattr(Multiplier, "setT", setT)
 # In[ ]:
 
 
-def adjustT(self, T, verbose=False, warn=True):
-    setT(self, T, verbose=False, warn=True)
+def adjustT(self, T, warn=True, verbose=False):
+    setT(self, T, warn=warn, verbose=verbose)
 
 
 setattr(Multiplier, "adjustT", adjustT)
@@ -553,7 +553,7 @@ def setWeights(self, weights, hold='settings'):
         self.setSettings(self.psSetting, self.vgaSetting)
     elif hold == 'T':
         # Sets T to orig values, and tweaks settings.
-        self.setT(self.T)
+        self.setT(self.T, warn=True)
 
 setattr(Multiplier, "setWeights", setWeights)
 

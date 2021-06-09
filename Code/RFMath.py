@@ -250,7 +250,7 @@ for loc in allMultLocs:
 
 
 outIndex = 5
-inIndex = 3
+inIndex = 5
 vga, ps = (1000, 100)
 loc = ('M', 'N', inIndex-1, outIndex-1) # ('M', 'N', in, out) :(.
 mult = multBank.getMultByLoc(loc)
@@ -328,14 +328,8 @@ np.abs(SMat)
 # In[ ]:
 
 
-tuningPSVals = np.linspace(0, 1023, 20, dtype=np.int64)
-tuningVGAVals = np.linspace(0, 1023, 20, dtype=np.int64)
-
-
-# In[ ]:
-
-
-tuningPSVals
+tuningPSVals = np.linspace(0, 1023, 25, dtype=np.int)
+tuningVGAVals = np.linspace(0, 1023, 25, dtype=np.int)
 
 
 # In[ ]:
@@ -361,8 +355,8 @@ tuningMatricesM = np.array(tuningMatricesM)
 # In[ ]:
 
 
-np.save("tuningVals20", tuningVals)
-np.save("tuningMatricesM20", tuningMatricesM)
+np.save("Main_data/tuningVals25", tuningVals)
+np.save("Main_data/tuningMatricesM25", tuningMatricesM)
 
 
 # ### Fake Measurements
@@ -429,8 +423,8 @@ np.save("tuningMatricesM", tuningMatricesM)
 # In[ ]:
 
 
-tuningVals = np.load("tuningVals20.npy")
-tuningMatricesM = np.load("tuningMatricesM20.npy")
+tuningVals = np.load("tuningVals10_v2.npy")
+tuningMatricesM = np.load("tuningMatricesM10_v2.npy")
 
 
 # In[ ]:
@@ -451,19 +445,7 @@ def PlotTuningMatrices(tuningMatrices, shape, maxRad):
 # In[ ]:
 
 
-tuningVals[-1]
-
-
-# In[ ]:
-
-
-tuningMatricesM[-1]
-
-
-# In[ ]:
-
-
-PlotTuningMatrices(tuningMatricesM, (20, 20, 5, 5), maxRad=1.5)
+PlotTuningMatrices(tuningMatricesM, (10, 10, 5, 5), maxRad=1.5)
 
 
 # The simulation builder `BuildNewNetwork` requires that we supply it with two functions, one which creates an RF network object from of a 5-way splitter, and another which creates one of the Multiplier.  We will assume that the splitter is generic and employ a simple theoretical model for that which was imported from our `NetworkBuilding` theoretical simulation notebook.  However, for the Multiplier, we will use the `MultiplierBank` and the `loc` code to extract the model for a multiplier assigned to that specific location in the network. 
@@ -487,12 +469,14 @@ def SplitterBuilder(loc):
 # In[ ]:
 
 
+# set the values for the models
 multBank.setAllMults(psVal=512, vgaVal=512)
 
 
 # In[ ]:
 
 
+# building a scikit-RF network object
 newNet = BuildNewNetwork(SplitterBuilder, MultBuilder, loc="N", n=5)
 T = newNet.s[0, 5:, :5]
 T
@@ -515,13 +499,13 @@ tuningMatricesS = np.array(tuningMatricesS)
 # In[ ]:
 
 
-PlotTuningMatrices(tuningMatricesS, (20, 20, 5, 5), maxRad=2.5)
+PlotTuningMatrices(tuningMatricesS, (10, 10, 5, 5), maxRad=2.5)
 
 
 # In[ ]:
 
 
-PlotTuningMatrices(tuningMatricesM/tuningMatricesS,(20, 20, 5, 5), maxRad=1.5)
+PlotTuningMatrices(tuningMatricesM/tuningMatricesS,(10, 10, 5, 5), maxRad=1.5)
 
 
 # In[ ]:
@@ -577,11 +561,57 @@ fun(X0)
 fun(X1)
 
 
+# fit = sp.optimize.minimize(fun, X1, method='Powell', 
+#                            options={'disp':True, 'adaptive':True, 'fatol':0.01})
+
 # In[ ]:
 
 
-fit = sp.optimize.minimize(fun, X1, method='Powell', 
-                           options={'disp':True, 'adaptive':True, 'fatol':0.01})
+# to be uncomment for a new set of values
+#inputKernels = [RandomComplexCircularMatrix(1, (5,5)) for i in range(100)]
+# np.save("largeNInput_v3", np.array(inputKernels))
+
+
+# In[ ]:
+
+
+inputKernels = np.load("largeNInput_v3.npy")
+
+
+# In[ ]:
+
+
+outputMeasurements = []
+badMats = []
+for inK in inputKernelsINV:
+    try:
+        setK = calcNewMatrixSettings(inK, multBank, 5,  warn=False)
+        setExpMultBank(exp, multBank)
+        measK, std = exp.measureSMatrix(delay=2)
+        saveData = (inK, setK, measK)
+        outputMeasurements.append(saveData)
+    except:
+        badMats.append(inK)
+
+
+# In[ ]:
+
+
+#save or load the measurement results
+# np.save("largeNOpenLoop_v3.npy", np.array(outputMeasurements))
+outputMeasurements=np.load("largeNOpenLoop_v3.npy")
+
+
+# In[ ]:
+
+
+inKK = []
+measKK = []
+setKK = []
+for i in np.arange(10):
+    inKK.append(np.array(outputMeasurements)[i,0])
+    measKK.append(np.array(outputMeasurements)[i,2])
+    setKK.append(np.array(outputMeasurements)[i,1])
 
 
 # In[ ]:
@@ -627,13 +657,13 @@ tuningMatricesS = np.array(tuningMatricesS)
 # In[ ]:
 
 
-PlotTuningMatrices(tuningMatricesS, (20, 20, 5, 5), maxRad=2.5)
+PlotTuningMatrices(tuningMatricesS, (10, 10, 5, 5), maxRad=1.5)
 
 
 # In[ ]:
 
 
-np.save("personalityVector_v3", XF)
+np.save("personalityVector_v5", XF)
 
 
 # # Set and Measure a Matrix
@@ -641,7 +671,7 @@ np.save("personalityVector_v3", XF)
 # In[ ]:
 
 
-def calcNewMatrixSettings(K, multBank, n):
+def calcNewMatrixSettings(K, multBank, n, warn=True, verbose=False):
     expK = []
     for i_out in range(n):
         expRow = []
@@ -649,7 +679,7 @@ def calcNewMatrixSettings(K, multBank, n):
             loc = ('M', 'N', i_in, i_out)
             mult = multBank.getMultByLoc(loc)
             T = 5*K[i_out, i_in]
-            mult.setT(T)
+            mult.setT(T, warn=warn, verbose=verbose)
             Texp = mult.TExpected
             expRow.append(Texp)
         expK.append(expRow)
@@ -670,7 +700,7 @@ def setExpMultBank(exp, multBank):
 # In[ ]:
 
 
-XF = np.load("personalityVector_v2.npy")
+XF = np.load("personalityVector_v4.npy")
 
 
 # In[ ]:
@@ -719,19 +749,20 @@ oldM = tuningMatricesM[testCase]
 # In[ ]:
 
 
-abs(m - oldM)
+oldM
 
 
 # In[ ]:
 
 
-tempComp = np.sum(m/oldM)/25
+MatrixError(m,oldM)
 
 
 # In[ ]:
 
 
-tempComp
+tempCOMP=MatrixError(m,oldM)/25
+tempCOMP
 
 
 # ## Inversion Experiment
@@ -801,6 +832,12 @@ m, std = exp.measureSMatrix(delay=2)
 # In[ ]:
 
 
+std
+
+
+# In[ ]:
+
+
 plotComplexArray(m, maxRad=np.max(np.abs(m)))
 
 
@@ -829,7 +866,7 @@ plotComplexArray(plotData, maxRad=0.1)
 # In[ ]:
 
 
-expName = 'trial1_'
+expName = 'trial3_'
 
 
 # In[ ]:
@@ -910,26 +947,296 @@ pp.show()
 
 # ## Large Number Experiments
 
-# In[ ]:
-
-
-inputKernels = [RandomComplexCircularMatrix(1.0, (5,5)) for i in range(100)]
-
+# ### Big Kappa
 
 # In[ ]:
 
 
-data = []
+# to be uncomment for a new set of values
+# inputKernels = [RandomComplexCircularMatrix(0.5, (5,5)) for i in range(100)]
+# np.save("largeNInput_v4", np.array(inputKernels))
+
+
+# In[ ]:
+
+
+inputKernels = np.load("largeNInput_v4.npy")
+
+
+# In[ ]:
+
+
+outputMeasurements = []
+badMats = []
+for inK in inputKernelsINV:
+    try:
+        setK = calcNewMatrixSettings(inK, multBank, 5,  warn=False)
+        setExpMultBank(exp, multBank)
+        measK, std = exp.measureSMatrix(delay=2)
+        saveData = (inK, setK, measK)
+        outputMeasurements.append(saveData)
+    except:
+        badMats.append(inK)
+
+
+# In[ ]:
+
+
+#save or load the measurement results
+#np.save("largeNOpenLoop_v4_2.npy", np.array(outputMeasurements))
+outputMeasurements=np.load("largeNOpenLoop_v4_2.npy")
+
+
+# In[ ]:
+
+
+inKK = []
+measKK = []
+setKK = []
+for i in np.arange(100):
+    inKK.append(np.array(outputMeasurements)[i,0])
+    measKK.append(np.array(outputMeasurements)[i,2])
+    setKK.append(np.array(outputMeasurements)[i,1])
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+s=np.sign(np.real(RandomComplexCircularMatrix(1, (5,5))))
+diff=np.array(range(100), dtype="float")
+comp=np.array(range(100), dtype="float")
+tet= []
+for i in np.arange(100):
+    tet.append(measKK[i]-inKK[i])
+    diff[i] = MatrixError(measKK[i],inKK[i])
+    comp[i]=MatrixError(inKK[i],inKK[i]+0.063*s)
+
+
+# In[ ]:
+
+
+# compare the big Kappa (open loop matrices)
+import matplotlib.pyplot as plt
+index = np.arange(100)
+plt.scatter(index, diff)
+plt.xlabel('# random matrix')
+plt.ylabel('$||\mathbb{K}_{meas}-\mathbb{K}_{target}||$')
+plt.ylim([0, 0.5])
+plt.savefig('BigKappa_rand100_v4.png',dpi=1200)
+
+
+# In[ ]:
+
+
+pp = PolarPlot("comparisson")
+i=19
+pp.addMatrixDiff(np.array(measKK[i]),np.array(inKK[i]))
+pp.show()
+abs(np.linalg.eig(inKK[i])[0])
+
+
+# ### Inverse matrices
+
+# In[ ]:
+
+
+# to be uncomment for a new set of values
+# inputKernels = [RandomComplexCircularMatrix(0.5, (5,5)) for i in range(100)]
+# np.save("largeNInput_100values", np.array(inputKernels))
+
+
+# In[ ]:
+
+
+inputKernels = np.load("largeNInput_v4.npy")
+
+
+# In[ ]:
+
+
+outputMeasurementsINV = []
+badMats = []
 for inK in inputKernels:
-    setK = calcNewMatrixSettings(inK, multBank, 5)
-    setExpMultBank(exp, multBank)
-    measK, std = exp.measureSMatrix(delay=2)
-    saveData = (inK, setK, measK)
-    outputMeasurements.append(saveData)    
+    try:
+        setK = calcNewMatrixSettings(inK, multBank, 5,  warn=False)
+        setExpMultBank(exp, multBank)
+        measK, std = exp.measureSMatrix(delay=2)
+        saveData = (inK, setK, measK)
+        outputMeasurementsINV.append(saveData)
+    except:
+        badMats.append(inK)
 
 
 # In[ ]:
 
 
-np.save("largeNOpenLoop", np.array(data))
+#save or load the measurement results
+# np.save("largeNOut_100.npy", np.array(outputMeasurements))
+np.save("largeNInput_v4_INV_new.npy", np.array(outputMeasurementsINV))
+
+
+# In[ ]:
+
+
+outputMeasurements=np.load("largeNOpenLoop_v4.npy")
+outputMeasurementsINV=np.load("largeNInput_v4_INV.npy")
+
+
+# In[ ]:
+
+
+inKK = []
+inKK_INV = []
+measKK = []
+measKK_INV = []
+setKK = []
+eigK = []
+for i in np.arange(100):
+    inKK_INV.append(np.array(outputMeasurementsINV)[i,0])
+    inKK.append(np.array(outputMeasurements)[i,0])
+    measKK.append(np.array(outputMeasurements)[i,2])
+    measKK_INV.append(np.array(outputMeasurementsINV)[i,2])
+    setKK.append(np.array(outputMeasurements)[i,1])
+#     eigK.append(np.linalg.eig(inKK[i])[0])
+
+
+# In[ ]:
+
+
+inKK[]
+
+
+# In[ ]:
+
+
+inKK_INV[10]
+
+
+# In[ ]:
+
+
+pp = PolarPlot("comparisson")
+i=5
+pp.addMatrixDiff(np.array(inKK[i]),np.array(inKK_INV[i]))
+pp.show()
+
+
+# In[ ]:
+
+
+# A_goal = np.identity(5)-inKK
+A_goal_inv = np.linalg.inv(np.identity(5)-inKK_INV)
+# A_set_inv = np.linalg.inv(np.identity(5)-setKK)
+A_exp = np.array(measKK_INV)
+A_meas_inv = (alpha1/beta*A_exp+(beta-alpha1*alpha2/beta)*np.identity(5))/beta
+
+
+# In[ ]:
+
+
+tr=np.arange(100, dtype="complex")
+diff=np.arange(100, dtype="complex")
+diff_INV=np.arange(100, dtype="complex")
+for i in np.arange(100):
+    tr[i] = abs(np.trace(np.dot(A_goal[i],A_meas_inv[i]))/5)
+    diff[i] = MatrixError(inKK[i],measKK[i])
+    diff_INV[i] = MatrixError(A_goal_inv[i],A_meas_inv[i])
+
+
+# In[ ]:
+
+
+import matplotlib.pyplot as plt
+index = np.arange(100)
+plt.scatter(index, diff_INV)
+plt.xlabel('# random matrix')
+plt.ylabel('$||\mathbb{K}_{meas}-\mathbb{K}_{target}||$')
+#plt.ylim([0, 1])
+# plt.savefig('BigKappa_rand100_v2.png',dpi=1200)
+
+
+# In[ ]:
+
+
+
+pp = PolarPlot("comparisson")
+i=90
+pp.addMatrixDiff(np.array(A_goal_inv[i]),np.array(A_meas_inv[i]))
+pp.show()
+# abs(np.linalg.eig(inKK_INV[i])[0])
+MatrixError(np.array(A_goal_inv[i]),np.array(A_meas_inv[i]))
+
+
+# In[ ]:
+
+
+abs(np.linalg.eig(np.identity(5)-inKK_INV[i])[0])
+
+
+# #### Test Playground
+
+# In[ ]:
+
+
+from bokeh.models import Range1d
+
+p = figure(plot_width = 600, plot_height = 600,
+           x_axis_label = '# random matrix', y_axis_label = '$||\mathbb{K}_{Meas}-\mathbb{K}_{target}||$')
+p.y_range=Range1d(0,0.5)
+p.circle(1+index, diff, size = 10, color = 'green')
+show(p)
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
+pp = PolarPlot("comparisson")
+i=755
+pp.addMatrixDiff(np.array(tt[i]),np.array(tt[i]))
+pp.show()
+
+
+# In[ ]:
+
+
+np.linalg.inv(np.identity(5)-inKK[0])
+np.linalg.eig(np.identity(5)-inKK[0])
+
+
+# In[ ]:
+
+
+inKK=np.array(outputMeasurements)[55,0]
+measKK=np.array(outputMeasurements)[55,2]
+tt=np.matmul(np.linalg.inv(inKK),measKK)
+
+
+# In[ ]:
+
+
+MatrixSqError(inKK,measKK)
+
+
+# In[ ]:
+
+
+test=np.array(outputMeasurements)
+
+
+# In[ ]:
+
+
+test[1,1]
 
