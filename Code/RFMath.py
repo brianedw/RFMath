@@ -249,6 +249,55 @@ for loc in allMultLocs:
 # In[ ]:
 
 
+inputSwitchComm.setSwitch(5)
+outputSwitchComm.setSwitch(5)
+
+
+# In[ ]:
+
+
+coupler1_J21=vnaComm.getS21AllAt45()
+
+
+# In[ ]:
+
+
+coupler1_J41=vnaComm.getS21AllAt45()
+
+
+# In[ ]:
+
+
+coupler1_J43=vnaComm.getS21AllAt45()
+
+
+# In[ ]:
+
+
+coupler1_J23=vnaComm.getS21AllAt45()
+
+
+# In[ ]:
+
+
+coupler5= np.array([coupler1_J21,coupler1_J41, coupler1_J23, coupler1_J43])
+
+
+# In[ ]:
+
+
+np.save("New_couplers_data/coupler5", coupler5)
+
+
+# In[ ]:
+
+
+print(abs(coupler1[:,0]),abs(coupler2[:,0]),abs(coupler3[:,0]),abs(coupler4[:,0]),abs(coupler5[:,0]))
+
+
+# In[ ]:
+
+
 outIndex = 1
 inIndex = 3
 vga, ps = (1000, 1000)
