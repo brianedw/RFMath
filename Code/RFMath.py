@@ -251,6 +251,7 @@ for loc in allMultLocs:
 
 inputSwitchComm.setSwitch(5)
 outputSwitchComm.setSwitch(5)
+vnaComm.getS21AllAt45()
 
 
 # In[ ]:
@@ -299,7 +300,7 @@ print(abs(coupler1[:,0]),abs(coupler2[:,0]),abs(coupler3[:,0]),abs(coupler4[:,0]
 
 
 outIndex = 1
-inIndex = 3
+inIndex = 5
 vga, ps = (1000, 1000)
 loc = ('M', 'N', inIndex-1, outIndex-1) # ('M', 'N', in, out) :(.
 mult = multBank.getMultByLoc(loc)
@@ -310,6 +311,13 @@ inputSwitchComm.setSwitch(inIndex)
 outputSwitchComm.setSwitch(outIndex)
 sleep(2)
 vnaComm.getS21AllAt45()
+
+
+# In[ ]:
+
+
+aa=vnaComm.getS21AllAt45()
+abs(aa[0])
 
 
 # In[ ]:
@@ -404,8 +412,8 @@ tuningMatricesM = np.array(tuningMatricesM)
 # In[ ]:
 
 
-np.save("Main_data/tuningVals25", tuningVals)
-np.save("Main_data/tuningMatricesM25", tuningMatricesM)
+np.save("Main_data/tuningVals25_15072021", tuningVals)
+np.save("Main_data/tuningMatricesM25_15072021", tuningMatricesM)
 
 
 # ### Fake Measurements
@@ -472,8 +480,8 @@ np.save("tuningMatricesM", tuningMatricesM)
 # In[ ]:
 
 
-tuningVals = np.load("Main_data/tuningVals25.npy")
-tuningMatricesM = np.load("Main_data/tuningMatricesM25.npy")
+tuningVals = np.load("Main_data/tuningVals25_15072021.npy")
+tuningMatricesM = np.load("Main_data/tuningMatricesM25_15072021.npy")
 
 
 # In[ ]:
@@ -666,7 +674,7 @@ PlotTuningMatrices(tuningMatricesS, (25, 25, 5, 5), maxRad=0.5)
 # In[ ]:
 
 
-np.save("Main_data/personalityVector", XF)
+np.save("Main_data/personalityVector_15072021", XF)
 
 
 # # Set and Measure a Matrix
@@ -703,7 +711,7 @@ def setExpMultBank(exp, multBank):
 # In[ ]:
 
 
-XF = np.load("Main_data/personalityVector.npy")
+XF = np.load("Main_data/personalityVector_15072021.npy")
 
 
 # In[ ]:
@@ -717,14 +725,14 @@ multBank.setPersonalityVectors(XF)
 # In[ ]:
 
 
-tuningVals = np.load("Main_data/tuningVals25.npy")
-tuningMatricesM = np.load("Main_data/tuningMatricesM25.npy")
+tuningVals = np.load("Main_data/tuningVals25_15072021.npy")
+tuningMatricesM = np.load("Main_data/tuningMatricesM25_15072021.npy")
 
 
 # In[ ]:
 
 
-testCase = 320
+testCase = 622
 
 
 # In[ ]:
@@ -986,9 +994,9 @@ for inK in inputKernels:
 
 
 #save or load the measurement results
-#np.save("Main_data/largeNClosedLoop.npy", np.array(outputMeasurementsINV))
-outputMeasurements=np.load("Main_data/largeNOpenLoop.npy")
-outputMeasurementsINV=np.load("Main_data/largeNClosedLoop.npy")
+np.save("Main_data/largeNClosedLoop_15072021.npy", np.array(outputMeasurementsINV))
+# outputMeasurements=np.load("Main_data/largeNOpenLoop.npy")
+# outputMeasurementsINV=np.load("Main_data/largeNClosedLoop.npy")
 
 
 # In[ ]:
