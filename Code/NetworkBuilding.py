@@ -97,7 +97,7 @@ def BuildAtten(T, freq, reciprocal=False, loc=()):
     label = str(loc)
     nFreqs = len(freq)
     S21 = T
-    S = np.zeros((nFreqs, 2, 2), dtype=np.complex)
+    S = np.zeros((nFreqs, 2, 2), dtype='complex')
     S[:, 1, 0] = S21
     if reciprocal:
         S[:, 0, 1] = S21
@@ -137,7 +137,7 @@ def BuildMultiplier(Tc, freq, loc=()):
     label = str(loc)
     nFreqs = len(freq)
     S21 = Tc
-    S = np.zeros((nFreqs, 2, 2), dtype=np.complex)
+    S = np.zeros((nFreqs, 2, 2), dtype='complex')
     S[:, 1, 0] = S21
     multNetwork = rf.Network(name=label, frequency=freq, z0=Z_0, s=S)
     return multNetwork
@@ -203,7 +203,7 @@ def Build3dBCoupler(freq, couplerConv="LC", loc=()):
     S31, S32 = a, b
     S41, S42 = b, a     
 
-    S = np.zeros((nFreqs, 4, 4), dtype=np.complex)
+    S = np.zeros((nFreqs, 4, 4), dtype='complex')
     S[:, 2, 0] = S31
     S[:, 3, 0] = S41
     S[:, 2, 1] = S32
@@ -272,7 +272,7 @@ def Build5PortSplitter(freq, loc=()):
                       [a,0,0,0,0,0],
                       [a,0,0,0,0,0]])
 
-    S = np.zeros((nFreqs, 6, 6), dtype=np.complex)
+    S = np.zeros((nFreqs, 6, 6), dtype='complex')
     S[:] = proto.reshape((1,6,6))
     coupNetwork = rf.Network(name=label, frequency=freq, z0=Z_0, s=S)
     return coupNetwork
@@ -301,6 +301,39 @@ coup.s[0]
 
 
 (np.matmul(coup.s[0], [1, 0, 0, 0, 0, 0])**2).sum()
+
+
+# ### Feedback Coupler
+
+# In[ ]:
+
+
+def BuildFBCoupler(aIn_aOut_bIn_bOut, freq, loc=()):
+    """
+    This generates the scalar SParameters (not dispersive) 4 port feedback coupler.
+    vna input  3 -> >- 4  vna output
+     fb input  1 ->>>- 2  fb output
+
+    aOut: 3 -> 4 : Undesired VNA to VNA coupling
+    aIn:  1 -> 2 : Large Thru Coupling
+    bOut: 1 -> 4 : Coupling from Loop to VNA Receive Port
+    bIn:  3 -> 2 : Coupling from VNA Input Port to Loop
+    """
+    aIn, aOut, bIn, bOut = aIn_aOut_bIn_bOut
+    Z_0 = 50.
+    label = str(loc)
+    
+    nFreqs = len(freq)
+    proto = np.array([[   0, aIn,   0,bOut],
+                      [ aIn,   0, bIn,   0],
+                      [   0, bIn,   0,aOut],
+                      [bOut,   0,aOut,   0]])
+                      
+    
+    S = np.zeros((nFreqs, 4, 4), dtype='complex')
+    S[:] = proto.reshape((1,4,4))
+    fbCoupNetwork = rf.Network(name=label, frequency=freq, z0=Z_0, s=S)
+    return fbCoupNetwork    
 
 
 # ### MZI
@@ -358,7 +391,7 @@ def BuildMZI(theta, phi, freq, couplerConv="LC", reciprocal=False, loc=()):
     else:
         raise TypeError("couplerConv should be either 'ideal' or 'LC'")
 
-    S = np.zeros((nFreqs, 4, 4), dtype=np.complex)
+    S = np.zeros((nFreqs, 4, 4), dtype='complex')
     S[:, 2, 0] = S31
     S[:, 3, 0] = S41
     S[:, 2, 1] = S32
@@ -1049,6 +1082,72 @@ def BuildNewNetwork(Splitter5WayBuilder, MultBuilder, loc=(), n=5):
     return net
 
 
+# In[ ]:
+
+
+def BuildNewNetworkCL(Splitter5WayBuilder, MultBuilder, FBCouplerBuilder, loc=(), n=5):
+    """
+    Builds a network of Multipliers as a SciKit-RF Circuit.
+
+    Inputs:
+        MultBuilder: A function that yields an network object
+        Splitter5WayBuilder: A function such that mziNetwork = MZIBuilder(loc)
+                    See notes below.
+        label:      Every element in a SciKit-RF circuit must have a unique name.  If the circuit
+                    consists of multiple triangles, this can be used to separate them.
+
+    """
+    Z_0 = 50.
+    label = str(loc)
+        
+    "All of the Multipliers"
+    multGrid = np.empty(shape=(n, n), dtype=object)
+    for i_out in range(n):
+        for i_in in range(n):
+            multLoc = ("M", loc, i_in, i_out)
+            mult = MultBuilder(multLoc)
+            multGrid[i_out, i_in] = mult
+            
+    freq = multGrid[0,0].frequency
+            
+    "Input Ports"
+    inPorts = [BuildPort(freq, ("P", loc, i)) for i in range(0, n)]
+    "Output Ports"
+    outPorts = [BuildPort(freq, ("P", loc, i)) for i in range(n, 2*n)]
+    "ingress splitters"
+    inSplitters = [Splitter5WayBuilder(("Si", loc, i)) for i in range(0, n)]
+    "egress splitters"
+    outSplitters = [Splitter5WayBuilder(("So", loc, i)) for i in range(0, n)]
+    "fbCouplers"
+    fbCouplers = [FBCouplerBuilder(("fb", loc, i)) for i in range(0,n)]    
+    """
+    vna input  3 -> >- 4  vna output
+     fb input  1 ->>>- 2  fb output    
+    """
+    "Simple Connections"
+    portInConnections = [ [(inPorts[i_in], 0), (fbCouplers[i_in], 2)] for i_in in range(n)]
+    portOutConnections = [ [(fbCouplers[i_out], 3), (outPorts[i_out], 0)] for i_out in range(n)]
+    
+    fbInConnections = [ [(fbCouplers[i_in], 1), (inSplitters[i_in], 0)] for i_in in range(n)]
+    fbOutConnections = [ [(outSplitters[i_out], 0), (fbCouplers[i_out], 0)] for i_out in range(n)]    
+
+    "Splitter to Mult to Splitter Connections"
+    internalConnections = []
+    for i_in in range(0, n):
+        for i_out in range(0, n):
+            c1 = [(inSplitters[i_in], i_out+1), (multGrid[i_out, i_in], 0)]
+            c2 = [(multGrid[i_out, i_in], 1), (outSplitters[i_out], i_in+1)]
+            internalConnections.extend([c1, c2])
+            
+    cnx = [*portInConnections, *portOutConnections, *fbInConnections, *fbOutConnections, *internalConnections]
+
+    "Build the Circuit"
+    cir = rf.Circuit(cnx)
+    net = cir.network
+    net.name = label
+    return net
+
+
 # ## Data Conversions
 
 # In[ ]:
@@ -1717,6 +1816,38 @@ T
 
 
 np.allclose(T, Ks)
+
+
+# In[ ]:
+
+
+def FBCouplerBuilder(loc):
+    """
+    aOut: 3 -> 4 : Undesired VNA to VNA coupling
+    aIn:  1 -> 2 : Large Thru Coupling
+    bOut: 1 -> 4 : Coupling from Loop to VNA Receive Port
+    bIn:  3 -> 2 : Coupling from VNA Input Port to Loop    
+    """
+    (_, locParent, i) = loc   
+    aOut = 0
+    aIn = np.sqrt(1**2 - 0.1**2)
+    bOut = 0.1
+    bIn = 0.1
+    coupVec = (aIn, aOut, bIn, bOut) 
+    return BuildFBCoupler(coupVec, freq, loc=loc)
+
+
+# In[ ]:
+
+
+newNet = BuildNewNetworkCL(SplitterBuilder, MultBuilder, FBCouplerBuilder, loc=(), n=5)
+
+
+# In[ ]:
+
+
+T = newNet.s[0, 5:, :5]
+T
 
 
 # In[ ]:

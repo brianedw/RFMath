@@ -180,7 +180,7 @@ freq45 = rf.Frequency(start=45, stop=45, npoints=1, unit='mhz', sweep_type='lin'
 # In[ ]:
 
 
-allMultLocs = NewMultLocs(5,'N')
+allMultLocs = NewMultLocs(5, 'N')
 allMultLocs;
 
 
@@ -190,11 +190,11 @@ allMultLocs;
 
 
 # Be careful here.  A horizontal row in the physical world represents a column in matrix multiplication
-multPhysNumberBank = [[ 31, 32, 33, 34, 35],
-                      [ 11, 12, 13, 14, 15],
-                      [ 16, 17, 18, 19, 20],
-                      [ 21, 22, 23, 24, 25],
-                      [ 26, 27, 28, 29, 30]]
+multPhysNumberBank = [[31, 32, 33, 34, 35],
+                      [11, 12, 13, 14, 15],
+                      [16, 17, 18, 19, 20],
+                      [21, 22, 23, 24, 25],
+                      [26, 27, 28, 29, 30]]
 multPhysNumberBank = np.array(multPhysNumberBank).T
 multPhysNumberBank
 
@@ -964,8 +964,8 @@ pp.show()
 
 
 # to be uncomment for a new set of values
-#inputKernels = [RandomComplexCircularMatrix(0.5, (5,5)) for i in range(1000)]
-#np.save("Main_data/largeNInput", np.array(inputKernels))
+# inputKernels = [RandomComplexCircularMatrix(0.5, (5,5)) for i in range(1000)]
+# np.save("Main_data/largeNInput", np.array(inputKernels))
 
 
 # In[ ]:
@@ -993,10 +993,10 @@ for inK in inputKernels:
 # In[ ]:
 
 
-#save or load the measurement results
-np.save("Main_data/largeNClosedLoop_15072021.npy", np.array(outputMeasurementsINV))
-# outputMeasurements=np.load("Main_data/largeNOpenLoop.npy")
-# outputMeasurementsINV=np.load("Main_data/largeNClosedLoop.npy")
+# save or load the measurement results
+# np.save("Main_data/largeNClosedLoop.npy", np.array(outputMeasurementsINV))
+outputMeasurements = np.load("Main_data/largeNOpenLoop.npy")
+outputMeasurementsINV = np.load("Main_data/largeNClosedLoop.npy")
 
 
 # In[ ]:
@@ -1009,33 +1009,33 @@ inKK_INV = []
 measKK_INV = []
 setKK_INV = []
 for i in np.arange(1000):
-    inKK.append(np.array(outputMeasurements)[i,0])
-    measKK.append(np.array(outputMeasurements)[i,2])
-    setKK.append(np.array(outputMeasurements)[i,1])
-    inKK_INV.append(np.array(outputMeasurementsINV)[i,0])
-    measKK_INV.append(np.array(outputMeasurementsINV)[i,2])
-    setKK_INV.append(np.array(outputMeasurementsINV)[i,1])
+    inKK.append(np.array(outputMeasurements)[i, 0])  # Goal Input Kernel
+    measKK.append(np.array(outputMeasurements)[i, 2]) # Measured Input Kernel
+    setKK.append(np.array(outputMeasurements)[i, 1]) # Experimentally Expected Kernel
+    inKK_INV.append(np.array(outputMeasurementsINV)[i, 0]) # Goal Input Kernel
+    measKK_INV.append(np.array(outputMeasurementsINV)[i, 2]) # Measured Inverted Kernel
+    setKK_INV.append(np.array(outputMeasurementsINV)[i, 1]) # Expermintally Expected Kernel
 
 
 # In[ ]:
 
 
 # s=np.sign(np.real(RandomComplexCircularMatrix(1, (5,5))))
-diff=np.array(range(1000), dtype="float")
-comp=np.array(range(1000), dtype="float")
-tet= []
+diff = np.array(range(1000), dtype="float")
+comp = np.array(range(1000), dtype="float")
+tet = []
 for i in np.arange(1000):
     tet.append(measKK[i]-inKK[i])
-    diff[i] = MatrixError(measKK[i],inKK[i])/np.linalg.norm(inKK[i])*100
-    comp[i]=MatrixError(inKK[i],inKK[i])
+    diff[i] = MatrixError(measKK[i], inKK[i])/np.linalg.norm(inKK[i])*100
+    comp[i] = MatrixError(inKK[i], inKK[i])
 
 
 # In[ ]:
 
 
-a=np.linalg.norm(measKK[1]-inKK[1])/np.linalg.norm(inKK[1])*100
-b=MatrixError(measKK[1],inKK[1])
-print(a,b)
+a = np.linalg.norm(measKK[1]-inKK[1])/np.linalg.norm(inKK[1])*100
+b = MatrixError(measKK[1], inKK[1])
+print(a, b)
 
 
 # In[ ]:

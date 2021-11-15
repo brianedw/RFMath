@@ -171,6 +171,40 @@ data = RandomComplexGaussianMatrix(10, (100,100))
 if mainQ: plotComplexArray(data, maxRad=3*10)
 
 
+# In[ ]:
+
+
+def RandomComplexNaiveMatrix(r, size):
+    """
+    Generates a matrix random complex values where each value is
+    within a circle of radius `r`.  Values are weighted toward the center
+    """
+    rMat = np.random.uniform(0, r, size=size)
+    pMat = np.random.uniform(0, 2*np.pi, size=size)
+    cMat = rMat*(np.cos(pMat) + 1j*np.sin(pMat))
+    return cMat
+
+
+# In[ ]:
+
+
+np.random.exponential()
+
+
+# In[ ]:
+
+
+def RandomComplexExponentialMatrix(r, size):
+    """
+    Generates a matrix random complex values where each value is
+    within a circle of radius `r`.  Values are weighted toward the center
+    """
+    rMat = np.random.exponential(r, size=size)
+    pMat = np.random.uniform(0, 2*np.pi, size=size)
+    cMat = rMat*(np.cos(pMat) + 1j*np.sin(pMat))
+    return cMat
+
+
 # # Plot Complex Matrix Difference
 
 # In[ ]:
@@ -257,8 +291,11 @@ class PolarPlot:
                                   x_range=[-1.1, 1.1], y_range=[-1.1, 1.1])
         p.xaxis[0].ticker=bokeh.models.tickers.FixedTicker(ticks=np.arange(-1, 2, 0.25))
         p.yaxis[0].ticker=bokeh.models.tickers.FixedTicker(ticks=np.arange(-1, 2, 0.25)) 
-        p.circle(x = [0,0,0,0], y = [0,0,0,0], radius = [0.25, 0.50, 0.75, 1.0], 
-                 fill_color = None, line_color='gray')
+        phis = np.linspace(0, 2*np.pi, num=181, endpoint=True)
+        xs = np.cos(phis)
+        ys = np.sin(phis)
+        for r in [0.25, 0.50, 0.75, 1.00]:
+            p.line(x=(r*xs).tolist(), y=(r*ys).tolist(), line_color='gray')
         p.line(x=[0,0], y=[-1,1], line_color='gray')
         p.line(x=[-1,1], y=[0,0], line_color='gray')
         xs = [0.25, 0.50, 0.75, 1.00]
@@ -308,6 +345,20 @@ class PolarPlot:
         glyph = bokeh.models.Circle(x="x", y="y", size=5, line_color=None, 
                                        fill_color=color, line_width=3)
         p.add_glyph(source, glyph)
+        
+    def addMatrixSD(self, data, color='cyan'):
+        """
+        This will draw lines showing the difference between two 2D matrices.
+        """
+        dataReshaped = data.reshape((-1, 2)).T
+        Xs = np.real(dataReshaped[0]).flatten()
+        Ys = np.imag(dataReshaped[0]).flatten()
+        SDs = np.abs(dataReshaped[1].flatten())
+        p = self.p
+        source = bokeh.models.ColumnDataSource(dict(x=Xs.tolist(), y=Ys.tolist(), sd=SDs.tolist()))
+        glyph = bokeh.models.Circle(x="x", y="y", radius='sd', line_color=None, 
+                                       fill_color=color, line_width=1, fill_alpha=0.5)
+        p.add_glyph(source, glyph)     
 
         
     def show(self):
@@ -337,10 +388,20 @@ if mainQ: pp.show()
 # In[ ]:
 
 
-def RescaleToUnitary(arr):
+def IsPassive(arr, threshold=1):
     u, s, v = np.linalg.svd(arr)
     maxS = max(s)
-    rescaledArr = arr/maxS
+    passiveQ = (maxS <= threshold)
+    return passiveQ
+
+
+# In[ ]:
+
+
+def RescaleToUnitary(arr, scaleFactor=1):
+    u, s, v = np.linalg.svd(arr)
+    maxS = max(s)
+    rescaledArr = scaleFactor*arr/maxS
     return rescaledArr
 
 

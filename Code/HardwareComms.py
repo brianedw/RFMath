@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 import sys
@@ -9,39 +9,39 @@ import os
 import math
 
 
-# In[21]:
+# In[ ]:
 
 
 os.getcwd()
 
 
-# In[2]:
+# In[ ]:
 
 
 #!conda install --yes --prefix {sys.prefix} pyserial
 
 
-# In[3]:
+# In[ ]:
 
 
 import serial
 import time
 
 
-# In[4]:
+# In[ ]:
 
 
 import pyvisa
 
 
-# In[5]:
+# In[ ]:
 
 
 import numpy as np
 import pandas as pd
 
 
-# In[6]:
+# In[ ]:
 
 
 import sys
@@ -53,7 +53,7 @@ else:
 
 # # Library
 
-# In[7]:
+# In[ ]:
 
 
 get_ipython().system(' python -m serial.tools.list_ports')
@@ -61,14 +61,14 @@ get_ipython().system(' python -m serial.tools.list_ports')
 
 # ## Switch
 
-# In[8]:
+# In[ ]:
 
 
 class SwitchComm:
     pass
 
 
-# In[9]:
+# In[ ]:
 
 
 def __init__(self, comValue='COM_', portAliases=None):
@@ -91,7 +91,7 @@ def __init__(self, comValue='COM_', portAliases=None):
 setattr(SwitchComm, '__init__', __init__)
 
 
-# In[10]:
+# In[ ]:
 
 
 def setSwitch(self, i, verbose=False):
@@ -113,7 +113,7 @@ def setSwitch(self, i, verbose=False):
 setattr(SwitchComm, 'setSwitch', setSwitch)
 
 
-# In[11]:
+# In[ ]:
 
 
 def close(self):
@@ -124,25 +124,25 @@ def close(self):
 setattr(SwitchComm, 'close', close)
 
 
-# In[12]:
+# In[ ]:
 
 
 #inputSwitch = SwitchComm(comValue='COM4')
 
 
-# In[13]:
+# In[ ]:
 
 
 #inputSwitch.close()
 
 
-# In[14]:
+# In[ ]:
 
 
 #outputSwitch = SwitchComm(comValue='COM3')
 
 
-# In[15]:
+# In[ ]:
 
 
 #outputSwitch.close()
@@ -150,7 +150,7 @@ setattr(SwitchComm, 'close', close)
 
 # ## Multiplier
 
-# In[8]:
+# In[ ]:
 
 
 class MultBankComm:
@@ -159,7 +159,7 @@ class MultBankComm:
     iMaster = 255    # It is expected that the Multiplier at the head has the number 255.
 
 
-# In[9]:
+# In[ ]:
 
 
 def __init__(self, comValue='COM_'):
@@ -181,7 +181,7 @@ def __init__(self, comValue='COM_'):
 setattr(MultBankComm, '__init__', __init__)
 
 
-# In[10]:
+# In[ ]:
 
 
 def setMult(self, idNum, v1, v2, verbose=False):
@@ -207,7 +207,7 @@ def setMult(self, idNum, v1, v2, verbose=False):
 setattr(MultBankComm, 'setMult', setMult)
 
 
-# In[11]:
+# In[ ]:
 
 
 def setMultBank(self, data, verbose=False):
@@ -224,7 +224,7 @@ def setMultBank(self, data, verbose=False):
 setattr(MultBankComm, 'setMultBank', setMultBank)
 
 
-# In[12]:
+# In[ ]:
 
 
 def blinkMult(self, multID, verbose=False):
@@ -244,7 +244,7 @@ def blinkMult(self, multID, verbose=False):
 setattr(MultBankComm, 'blinkMult', blinkMult)
 
 
-# In[13]:
+# In[ ]:
 
 
 def blinkList(self, multIDs, verbose=False, delay=5.5):
@@ -264,7 +264,7 @@ def blinkList(self, multIDs, verbose=False, delay=5.5):
 setattr(MultBankComm, 'blinkList', blinkList)
 
 
-# In[14]:
+# In[ ]:
 
 
 def close(self):
@@ -275,25 +275,25 @@ def close(self):
 setattr(MultBankComm, 'close', close)
 
 
-# In[17]:
+# In[ ]:
 
 
 # multBankComm = MultBankComm(comValue='COM5')
 
 
-# In[18]:
+# In[ ]:
 
 
 # multBankComm.blinkMult(255)
 
 
-# In[19]:
+# In[ ]:
 
 
 # multBankComm.blinkList([6,7,8])
 
 
-# In[20]:
+# In[ ]:
 
 
 # multBankComm.close()

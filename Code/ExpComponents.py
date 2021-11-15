@@ -93,6 +93,12 @@ from UtilityMath import (plotComplexArray, gaussian_filter_complex, complex2DPCA
 # In[ ]:
 
 
+from NetworkBuilding import (BuildFBCoupler)
+
+
+# In[ ]:
+
+
 mainQ =(__name__ == '__main__')
 mainQ
 
@@ -675,6 +681,8 @@ class MultiplierBank:
 def __init__(self):
     self.bankByLoc = dict()
     self.bankByPhysNum = dict()
+    self.locArray = None
+    self.physNumArray = None
     
 setattr(MultiplierBank, "__init__", __init__)
 
@@ -775,6 +783,16 @@ setattr(MultiplierBank, "setAllMults", setAllMults)
 # In[ ]:
 
 
+def setAllMultsArray(self, psVal, vgaVal):
+    for mult in self.getMults():
+        mult.setSettings(psVal, vgaVal)
+        
+setattr(MultiplierBank, "setAllMults", setAllMults)        
+
+
+# In[ ]:
+
+
 def setAllMults(self, psVal, vgaVal):
     for mult in self.getMults():
         mult.setSettings(psVal, vgaVal)
@@ -844,6 +862,228 @@ m2.weights
 
 
 mBank.getPersonalityVectors()
+
+
+# # FBCoupler
+
+# ## Define Element
+
+# In[ ]:
+
+
+bIn = 0.2
+bOut = 0.2
+aOut = 0
+aIn = np.sqrt(1**2 - bIn**2)
+np.array([[   0, aIn,   0,bOut],
+          [ aIn,   0, bIn,   0],
+          [   0, bIn,   0,aOut],
+          [bOut,   0,aOut,   0]])
+
+
+# In[ ]:
+
+
+class FBCoupler:
+    """
+    A FBCoupler element,
+    
+    aIn:  1 -> 2 : Large Thru Coupling
+    aOut: 3 -> 4 : Undesired VNA to VNA coupling
+    bIn:  3 -> 2 : Coupling from VNA Input Port to Loop   
+    bOut: 1 -> 4 : Coupling from Loop to VNA Receive Port
+    aIn_aOut_bIn_bOut
+    """
+    baseWeights = (0.915, 0.004, 0.043, 0.083)
+
+
+# In[ ]:
+
+
+def __init__(self, loc=(), freq=45e6):
+    self.loc = loc                    # The location within the structure.  Assumed to be unique and hashable.
+    self.coeffs = np.zeros_like(FBCoupler.baseWeights, dtype='complex')               # the proportion of the various PCA components
+    self.setCoeffs(FBCoupler.baseWeights)
+
+setattr(FBCoupler, "__init__", __init__)
+
+
+# In[ ]:
+
+
+def getRFNetwork(self):
+    """
+    Returns a SciKit-RF network object with a name based on loc
+    """
+    freq = rf.Frequency(start=45, stop=45, npoints=1, unit='mhz', sweep_type='lin')
+    return BuildFBCoupler(self.coeffs, freq, loc=self.loc)
+
+setattr(FBCoupler, "getRFNetwork", getRFNetwork)
+
+
+# In[ ]:
+
+
+def setCoeffs(self, coeffs):
+    self.coeffs[:] = coeffs[:]
+
+setattr(FBCoupler, "setCoeffs", setCoeffs)
+
+
+# ## Define Bank
+
+# In[ ]:
+
+
+class FBCouplerBank:
+    pass
+
+
+# In[ ]:
+
+
+def __init__(self):
+    self.bankByLoc = dict()
+    
+setattr(FBCouplerBank, "__init__", __init__)
+
+
+# In[ ]:
+
+
+def addFBCoup(self, mult):
+    loc = mult.loc
+    if (loc in self.bankByLoc):
+        print("not added due to redundancy")
+        return
+    self.bankByLoc[loc] = mult   
+
+setattr(FBCouplerBank, "addFBCoup", addFBCoup)
+
+
+# In[ ]:
+
+
+def getFBCoups(self):
+    return list(self.bankByLoc.values())
+
+setattr(FBCouplerBank, "getFBCoups", getFBCoups)
+
+
+# In[ ]:
+
+
+def getFBCoupByLoc(self, loc):
+    return self.bankByLoc[loc]
+
+setattr(FBCouplerBank, "getFBCoupByLoc", getFBCoupByLoc)
+
+
+# In[ ]:
+
+
+def getLocs(self):
+    locs = list(self.bankByLoc.keys())
+    locs.sort()
+    return locs
+
+setattr(FBCouplerBank, "getLocs", getLocs)
+
+
+# In[ ]:
+
+
+def getPersonalityVectors(self):
+    """
+    The personality weights of each multiplier will need to be optimized.  It
+    will be necessary to treat all of these as a 1D List.  This provides an
+    interface to do so.
+    
+    Weights are returned in an order based on the multiplier locations.
+    """
+    locs = self.getLocs()
+    listOfWeights = [self.bankByLoc[l].coeffs for l in locs]
+    weights1DComplex = np.array(listOfWeights).flatten()
+    weights1DReal = weights1DComplex.view('float')
+    return weights1DReal
+
+setattr(FBCouplerBank, "getPersonalityVectors", getPersonalityVectors)
+
+
+# In[ ]:
+
+
+def setPersonalityVectors(self, coeffs1DReal):
+    """
+    The personality weights of each multiplier will need to be optimized.  It
+    will be necessary to treat all of these as a 1D List.  This provides an
+    interface to do so.
+    
+    Weights are set in an order based on the multiplier locations.
+    """
+    coeffs1DComplex = coeffs1DReal.view('complex')
+    locs = self.getLocs()
+    vSplit = np.split(coeffs1DComplex, len(locs))
+    for i, loc in enumerate(locs):
+        fbCoup = self.bankByLoc[loc]
+        fbCoup.setCoeffs(vSplit[i])
+
+setattr(FBCouplerBank, "setPersonalityVectors", setPersonalityVectors)
+
+
+# In[ ]:
+
+
+def getRFNetwork(self, loc):
+    fbCoup = self.getFBCoupByLoc(loc)
+    network = fbCoup.getRFNetwork()
+    return network
+
+setattr(FBCouplerBank, "getRFNetwork", getRFNetwork)
+
+
+# In[ ]:
+
+
+fbCoupBank = FBCouplerBank()
+
+
+# In[ ]:
+
+
+c1 = FBCoupler(loc=('FBC', 1))
+c2 = FBCoupler(loc=('FBC', 2))
+
+
+# In[ ]:
+
+
+c1.getRFNetwork()
+
+
+# In[ ]:
+
+
+fbCoupBank.addFBCoup(c1)
+fbCoupBank.addFBCoup(c2)
+
+
+# In[ ]:
+
+
+c1.coeffs
+
+
+# In[ ]:
+
+
+fbCoupBank.getPersonalityVectors()
+
+
+# In[ ]:
+
+
+
 
 
 # # 3dB Coupler
@@ -1018,6 +1258,67 @@ for i, _ in enumerate(fnames):
 
 
 if mainQ: pp.show()
+
+
+# In[ ]:
+
+
+
+
+
+# # Input/Output Coupler
+
+# In[ ]:
+
+
+os.getcwd()
+
+
+# In[ ]:
+
+
+coupIO1 = np.load('New_couplers_data\\coupler1.npy')
+coupIO2 = np.load('New_couplers_data\\coupler2.npy')
+coupIO3 = np.load('New_couplers_data\\coupler3.npy')
+coupIO4 = np.load('New_couplers_data\\coupler4.npy')
+coupIO5 = np.load('New_couplers_data\\coupler5.npy')
+
+
+# In[ ]:
+
+
+IOCoupsRaw = [np.load('New_couplers_data\\coupler'+str(i)+'.npy') for i in range(1, 5+1)]
+
+
+# In[ ]:
+
+
+IOCoupsRaw
+
+
+# In[ ]:
+
+
+plot = PolarPlot("IO Couplers")
+
+
+# In[ ]:
+
+
+data = np.swapaxes(np.array(IOCoupsRaw), 0, 1)
+
+
+# In[ ]:
+
+
+for i, color in enumerate(['red', 'cyan', 'orange', 'yellow']):
+    plot.addMatrixSD(data[i], color)
+
+
+# In[ ]:
+
+
+plot.show()
 
 
 # In[ ]:
