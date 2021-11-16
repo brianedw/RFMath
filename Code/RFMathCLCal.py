@@ -156,6 +156,73 @@ from UtilityMath import (convertArrayToDict,
 from HardwareComms import (MultBankComm, SwitchComm, VNAComm, ExperimentalSetup)
 
 
+# ### Custom Functions
+
+# In[ ]:
+
+
+def PlotMatricesListAsGrid(matList, shape, maxRad):
+    """
+    tuningMatrices.shape => (N*M, n, n)
+    shape = (N, M, n, n)
+    """
+    N, M, n, n = shape
+    matricesNxN = matList.reshape(shape)
+    matricesNxN_List = [[matricesNxN[r,c] for c in range(M)] for r in range(N)]
+    matrices2D = np.block(matricesNxN_List)
+    plotComplexArray(matrices2D, maxRad=maxRad)
+
+
+# In[ ]:
+
+
+def SettingsMatrixToVectors(ps_vga_setting_Mat, multPhysNumberBank):
+    psVals = ps_vga_setting_Mat[:,:,0].reshape((-1))
+    vgaVals = ps_vga_setting_Mat[:,:,1].reshape((-1))
+    physNumbers = multPhysNumberBank.reshape((-1))
+    return (psVals, vgaVals, physNumbers)
+
+
+# In[ ]:
+
+
+def SetMultBankSettings(ps_vga_setting_Mat, multBank, multLocBank):
+    nCols, nRows, _ = ps_vga_setting_Mat.shape  # Is this right?
+    for i_out in range(nRows):
+        for i_in in range(nCols):
+            loc = multLocBank[i_out, i_in]
+            mult = multBank.getMultByLoc(loc)
+            psVal, vgaVal = ps_vga_setting_Mat[i_out, i_in]
+            mult.setSettings(psVal, vgaVal)
+
+
+# In[ ]:
+
+
+def SetMultBankT(K, multBank, multLocBank, warn=True, verbose=False):
+    nCols, nRows, _ = ps_vga_setting_Mat.shape
+    for i_out in range(nRows):
+        for i_in in range(nCols):
+            loc = multLocBank[i_out, i_in]
+            mult = multBank.getMultByLoc(loc)
+            T = np.sqrt(nCols)*np.sqrt(nRows)*K[i_out, i_in]
+            mult.setT(T, warn=warn, verbose=verbose)
+
+
+# In[ ]:
+
+
+def GetMultBankSettings(KShape, multBank, multLocBank):
+    nCols, nRows = KShape
+    ps_vga_setting_Mat = np.zeros(shape=(nCols, nRows, 2), dtype='int')
+    for i_out in range(nRows):
+        for i_in in range(nCols):
+            loc = multLocBank[i_out, i_in]
+            mult = multBank.getMultByLoc(loc)
+            ps_vga_setting_Mat[i_out, i_in] = (mult.psSetting, mult.vgaSetting)
+    return ps_vga_setting_Mat
+
+
 # # New Architecture
 
 # This analysis has two steps: Tuning and Performance 
@@ -237,46 +304,6 @@ for i_in in range(5):
     for i_out in range(5):
         multLocBank[i_out, i_in] = ('M', 'N', i_in, i_out)
 multLocBank    
-
-
-# In[ ]:
-
-
-def SetMultBankSettings(ps_vga_setting_Mat, multBank, multLocBank):
-    nCols, nRows, _ = ps_vga_setting_Mat.shape  # Is this right?
-    for i_out in range(nRows):
-        for i_in in range(nCols):
-            loc = multLocBank[i_out, i_in]
-            mult = multBank.getMultByLoc(loc)
-            psVal, vgaVal = ps_vga_setting_Mat[i_out, i_in]
-            mult.setSettings(psVal, vgaVal)
-
-
-# In[ ]:
-
-
-def SetMultBankT(K, multBank, multLocBank):
-    nCols, nRows, _ = ps_vga_setting_Mat.shape
-    for i_out in range(nRows):
-        for i_in in range(nCols):
-            loc = multLocBank[i_out, i_in]
-            mult = multBank.getMultByLoc(loc)
-            T = np.sqrt(nCols)*np.sqrt(nRows)*K[i_out, i_in]
-            mult.setT(T, warn=warn, verbose=verbose)
-
-
-# In[ ]:
-
-
-def GetMultBankSettings(KShape, multBank, multLocBank):
-    nCols, nRows = KShape
-    ps_vga_setting_Mat = np.array(shape=(nCols, nRows, 2), dtype='int')
-    for i_out in range(nRows):
-        for i_in in range(nCols):
-            loc = multLocBank[i_out, i_in]
-            mult = multBank.getMultByLoc(loc)
-            ps_vga_setting_Mat[i_out, i_in] = (mult.psSetting, mult.vgaSetting)
-    return ps_vga_setting_Mat
 
 
 # In[ ]:
@@ -482,48 +509,68 @@ SMat, STD = exp.measureSMatrix(delay=2)
 np.abs(SMat)
 
 
+# ### Defining Settings
+
+# In[ ]:
+
+
+psVals = np.linspace(0, 1023, 12, dtype="int")
+vgaVals = np.linspace(0, 1023, 12, dtype="int")
+
+
+# In[ ]:
+
+
+ps_vga_setting_Mats_OL = [np.full(shape=(5,5,2), fill_value=(ps, vga)) for vga in vgaVals for ps in psVals]
+ps_vga_setting_Mats_OL = np.array(ps_vga_setting_Mats_OL)
+
+
+# In[ ]:
+
+
+ps_settings = ps_vga_setting_Mats_OL[:,:,:,0]
+vga_settings = ps_vga_setting_Mats_OL[:,:,:,1]
+PlotMatricesListAsGrid(ps_settings, shape=(12, 12, 5, 5), maxRad=1023)
+PlotMatricesListAsGrid(vga_settings, shape=(12, 12, 5, 5), maxRad=1023)
+
+
 # ### Physical Measurement
 
 # Next we define a series of multiplier set points that we'll use to ascertain the multiplier's PCA weights.
-
-# In[ ]:
-
-
-np.linspace(0, 1023, 25, dtype="int")
-
-
-# In[ ]:
-
-
-tuningPSVals = np.linspace(0, 1023, 25, dtype="int")
-tuningVGAVals = np.linspace(0, 1023, 25, dtype="int")
-
-
-# In[ ]:
-
-
-tuningVals = [(ps, vga) for vga in tuningVGAVals for ps in tuningPSVals]
-
 
 # For each PS, VGA pair, the multipliers are uniformly set and the scattering matrix of the network is measured.
 
 # In[ ]:
 
 
-tuningMatricesM = []
-for (psVal, vgaVal) in tuningVals:
-    exp.setMults(int(psVal), int(vgaVal), multBank.getPhysNums())
-    time.sleep(1)
-    m, std = exp.measureSMatrix(delay=2)
-    tuningMatricesM.append(m)
-tuningMatricesM = np.array(tuningMatricesM)
+# # OLD
+# tuningMatricesM = []
+# for (psVal, vgaVal) in tuningVals:
+#     exp.setMults(int(psVal), int(vgaVal), multBank.getPhysNums())
+#     time.sleep(1)
+#     m, std = exp.measureSMatrix(delay=2)
+#     tuningMatricesM.append(m)
+# tuningMatricesM = np.array(tuningMatricesM)
 
 
 # In[ ]:
 
 
-np.save("Main_data/tuningVals25_15072021", tuningVals)
-np.save("Main_data/tuningMatricesM25_15072021", tuningMatricesM)
+TMatricesMOL = []
+for ps_vga_setting_Mat in ps_vga_setting_Mats_OL:
+    (psVals, vgaVals, physNumbers) = SettingsMatrixToVectors(ps_vga_setting_Mat, multPhysNumberBank)
+    exp.setMults(psVals, vgaVals, psVals)
+    time.sleep(1)
+    m, std = exp.measureSMatrix(delay=2)
+    TMatricesMOL.append(m)
+TMatricesMOL = np.array(TMatricesMOL)
+
+
+# In[ ]:
+
+
+np.save("Main_data/tuningVals25_15072021", ps_vga_setting_Mats_OL)
+np.save("Main_data/tuningMatricesM25_15072021", TMatricesMOL)
 
 
 # ### Fake Measurements
@@ -545,44 +592,63 @@ def SplitterBuilder(loc):
 # In[ ]:
 
 
-X0 = multBank.getPersonalityVectors()
+XOL0 = X0.copy()
 
 
 # In[ ]:
 
 
-XSet = X0*np.random.normal(1, 0.1, size=len(X0))
+XOL0 = multBank.getPersonalityVectors()
 
 
 # In[ ]:
 
 
-multBank.setPersonalityVectors(XSet)
+XOLSet = XOL0*np.random.normal(1, 0.1, size=len(X0))
 
 
 # In[ ]:
 
 
-tuningMatricesM = []
-for (psVal, vgaVal) in tuningVals:
-    multBank.setAllMults(psVal, vgaVal)
+multBank.setPersonalityVectors(XOLSet)
+
+
+# In[ ]:
+
+
+# tuningMatricesMOL = []
+# for (psVal, vgaVal) in tuningVals:
+#     multBank.setAllMults(psVal, vgaVal)
+#     newNet = BuildNewNetwork(SplitterBuilder, MultBuilder, loc="N", n=5)
+#     m = newNet.s[0, 5:, :5]
+#     tuningMatricesMOL.append(m)
+# tuningMatricesMOL = np.array(tuningMatricesMOL)
+
+
+# In[ ]:
+
+
+TMatricesSOL = []
+for ps_vga_setting_Mat in ps_vga_setting_Mats_OL:
+    (psVals, vgaVals, physNumbers) = SettingsMatrixToVectors(ps_vga_setting_Mat, multPhysNumberBank)
+    multBank.setAllMultsArray(psVals, vgaVals, physNumbers)
     newNet = BuildNewNetwork(SplitterBuilder, MultBuilder, loc="N", n=5)
     m = newNet.s[0, 5:, :5]
-    tuningMatricesM.append(m)
-tuningMatricesM = np.array(tuningMatricesM)
+    TMatricesSOL.append(m)
+TMatricesSOL = np.array(TMatricesSOL)
 
 
 # In[ ]:
 
 
-multBank.setPersonalityVectors(X0)
+multBank.setPersonalityVectors(XOL0)
 
 
 # In[ ]:
 
 
-np.save("tuningVals", tuningVals)
-np.save("tuningMatricesM", tuningMatricesM)
+np.save("ps_vga_setting_Mats_OL", ps_vga_setting_Mats_OL)
+np.save("TMatricesSOL", TMatricesSOL)
 
 
 # ### Fitting
@@ -590,29 +656,20 @@ np.save("tuningMatricesM", tuningMatricesM)
 # In[ ]:
 
 
-tuningVals = np.load("Main_data/tuningVals25_15072021.npy")
-tuningMatricesM = np.load("Main_data/tuningMatricesM25_15072021.npy")
+XCur = multBank.getPersonalityVectors()
 
 
 # In[ ]:
 
 
-def PlotTuningMatrices(tuningMatrices, shape, maxRad):
-    """
-    tuningMatrices.shape => (N*M, n, n)
-    shape = (N, M, n, n)
-    """
-    N, M, n, n = shape
-    tuningMatricesNxN = tuningMatrices.reshape(shape)
-    tuningMatricesNxN_List = [[tuningMatricesNxN[r,c] for c in range(M)] for r in range(N)]
-    tuningMatrices2D = np.block(tuningMatricesNxN_List)
-    plotComplexArray(tuningMatrices2D, maxRad=maxRad)
+ps_vga_setting_Mats_OL = np.load("ps_vga_setting_Mats_OL.npy")
+TMatricesOL = np.load("TMatricesSOL.npy")  # Change this from "TMatricesSOL.npy" to "TMatricesMOL.npy" as measured data is available.
 
 
 # In[ ]:
 
 
-PlotTuningMatrices(tuningMatricesM, (25, 25, 5, 5), maxRad=0.5)
+PlotMatricesListAsGrid(TMatricesOL, (12, 12, 5, 5), maxRad=1.5)
 
 
 # The simulation builder `BuildNewNetwork` requires that we supply it with two functions, one which creates an RF network object from of a 5-way splitter, and another which creates one of the Multiplier.  We will assume that the splitter is generic and employ a simple theoretical model for that which was imported from our `NetworkBuilding` theoretical simulation notebook.  However, for the Multiplier, we will use the `MultiplierBank` and the `loc` code to extract the model for a multiplier assigned to that specific location in the network. 
@@ -654,31 +711,34 @@ T
 # In[ ]:
 
 
-tuningMatricesS = []
-for (psVal, vgaVal) in tuningVals:
-    multBank.setAllMults(psVal, vgaVal)
+TMatricesFOL = []
+for ps_vga_setting_Mat in ps_vga_setting_Mats_OL:
+    (psVals, vgaVals, physNumbers) = SettingsMatrixToVectors(ps_vga_setting_Mat, multPhysNumberBank)
+    multBank.setAllMultsArray(psVals, vgaVals, physNumbers)
     newNet = BuildNewNetwork(SplitterBuilder, MultBuilder, loc="N", n=5)
     m = newNet.s[0, 5:, :5]
-    tuningMatricesS.append(m)
-tuningMatricesS = np.array(tuningMatricesS)
+    TMatricesFOL.append(m)
+TMatricesFOL = np.array(TMatricesFOL)
 
 
 # In[ ]:
 
 
-PlotTuningMatrices(tuningMatricesS, (25, 25, 5, 5), maxRad=0.5)
+PlotMatricesListAsGrid(TMatricesFOL, (12, 12, 5, 5), maxRad=1.5)
 
 
 # In[ ]:
 
 
-PlotTuningMatrices(tuningMatricesM/tuningMatricesS,(25, 25, 5, 5), maxRad=0.5)
+PlotMatricesListAsGrid(TMatricesOL/TMatricesFOL,(12, 12, 5, 5), maxRad=0.5)
 
 
 # In[ ]:
 
 
-grossCorrFact = np.mean(tuningMatricesM/tuningMatricesS)
+grossCorrFact = np.mean(TMatricesOL/TMatricesFOL)
+print(grossCorrFact)
+XOL1 = (grossCorrFact*XCur.view('complex')).view('float')
 grossCorrFact
 
 
@@ -690,28 +750,17 @@ grossCorrFact
 # In[ ]:
 
 
-X1 = (grossCorrFact*X0.view('complex')).view('float')
-
-
-# In[ ]:
-
-
-# X0 = multBank.getPersonalityVectors()  # Defined at definition of multBank
-
-
-# In[ ]:
-
-
 def fun(X):
     multBank.setPersonalityVectors(X)
-    tuningMatricesS = []
-    for (psVal, vgaVal) in tuningVals:
-        multBank.setAllMults(psVal, vgaVal)
+    TMatricesFOL = []
+    for ps_vga_setting_Mat in ps_vga_setting_Mats_OL:
+        (psVals, vgaVals, physNumbers) = SettingsMatrixToVectors(ps_vga_setting_Mat, multPhysNumberBank)
+        multBank.setAllMultsArray(psVals, vgaVals, physNumbers)
         newNet = BuildNewNetwork(SplitterBuilder, MultBuilder, loc="N", n=5)
         m = newNet.s[0, 5:, :5]
-        tuningMatricesS.append(m)
-    tuningMatricesS = np.array(tuningMatricesS)
-    error = np.sum(np.abs(tuningMatricesS - tuningMatricesM)**2)
+        TMatricesFOL.append(m)
+    TMatricesFOL = np.array(TMatricesFOL)
+    error = np.sum(np.abs(TMatricesFOL - TMatricesOL)**2)
     print(error)
     return error
 
@@ -719,32 +768,32 @@ def fun(X):
 # In[ ]:
 
 
-fun(X0)
+fun(XOL0)
 
 
 # In[ ]:
 
 
-fun(X1)
+fun(XOL1)
 
 
 # In[ ]:
 
 
-fit = sp.optimize.minimize(fun, X1, method='Powell', 
+fit = sp.optimize.minimize(fun, XOL1, method='Powell', 
                            options={'disp':True, 'adaptive':True, 'fatol':0.01})
 
 
 # In[ ]:
 
 
-XF = multBank.getPersonalityVectors()
+XOLF = multBank.getPersonalityVectors()
 
 
 # In[ ]:
 
 
-# XF = fit.x
+# XOLF = fit.x
 
 
 # Error when multipliers are the uniform average all devices measured in the PCA:
@@ -754,43 +803,38 @@ XF = multBank.getPersonalityVectors()
 # In[ ]:
 
 
-fun(XF)
+fun(XOLF)
 
 
 # In[ ]:
 
 
-multBank.setPersonalityVectors(XF)
+multBank.setPersonalityVectors(XOLF)
 
 
 # In[ ]:
 
 
-tuningMatricesS = []
-for (psVal, vgaVal) in tuningVals:
-    multBank.setAllMults(psVal, vgaVal)
+TMatricesFOL = []
+for ps_vga_setting_Mat in ps_vga_setting_Mats_OL:
+    (psVals, vgaVals, physNumbers) = SettingsMatrixToVectors(ps_vga_setting_Mat, multPhysNumberBank)
+    multBank.setAllMultsArray(psVals, vgaVals, physNumbers)
     newNet = BuildNewNetwork(SplitterBuilder, MultBuilder, loc="N", n=5)
     m = newNet.s[0, 5:, :5]
-    tuningMatricesS.append(m)
-tuningMatricesS = np.array(tuningMatricesS)
+    TMatricesFOL.append(m)
+TMatricesFOL = np.array(TMatricesFOL)
 
 
 # In[ ]:
 
 
-PlotTuningMatrices(tuningMatricesS, (25, 25, 5, 5), maxRad=0.5)
+PlotMatricesListAsGrid(TMatricesFOL, (12, 12, 5, 5), maxRad=1.5)
 
 
 # In[ ]:
 
 
-np.save("Main_data/personalityVector_15072021", XF)
-
-
-# In[ ]:
-
-
-
+np.save("XOLF", XOLF)
 
 
 # ## Tuning Closed Loop
@@ -800,49 +844,39 @@ np.save("Main_data/personalityVector_15072021", XF)
 # In[ ]:
 
 
-XF = np.load("Main_data/personalityVector_15072021.npy")
+XOLF = np.load("XOLF.npy")
 
 
 # In[ ]:
 
 
-multBank.setPersonalityVectors(XF)
+multBank.setPersonalityVectors(XOLF)
 
 
 # In[ ]:
 
 
-def SetKBankGetSettings(K, multBank, warn=True, verbose=False):
-    nCols, nRows = K.shape
-    settingsMat = []
-    for i_out in range(nRows):
-        settingsRow = []
-        for i_in in range(nCols):
-            loc = ('M', 'N', i_in, i_out)
-            mult = multBank.getMultByLoc(loc)
-            T = np.sqrt(nCols)*np.sqrt(nRows)*K[i_out, i_in]
-            mult.setT(T, warn=warn, verbose=verbose)
-            ps_vga_settings = (mult.psSetting, mult.vgaSetting)
-            settingsRow.append(ps_vga_settings)
-        settingsMat.append(settingsRow)
-    settingsMat = np.array(settingsMat)
-    return (settingsMat)
-
-
-# In[ ]:
-
-
-tuningValsCL = []
+ps_vga_setting_Mats_CL = []
 for _ in range(15):
     K = RescaleToUnitary(RandomComplexNaiveMatrix(0.3, (5,5)), 0.9)
-    settings = SetKBankGetSettings(K, multBank, warn=False)
-    tuningValsCL.append(settings)
+    SetMultBankT(K, multBank, multLocBank)
+    ps_vga_setting_Mat = GetMultBankSettings((5,5), multBank, multLocBank)
+    ps_vga_setting_Mats_CL.append(ps_vga_setting_Mat)
 
 
 # In[ ]:
 
 
-np.save("Main_data/tuningValsCL", tuningValsCL)
+ps_settings = ps_vga_setting_Mats_CL[:,:,:,0]
+vga_settings = ps_vga_setting_Mats_CL[:,:,:,1]
+PlotMatricesListAsGrid(ps_settings, shape=(3, 5, 5, 5), maxRad=1023)
+PlotMatricesListAsGrid(vga_settings, shape=(3, 5, 5, 5), maxRad=1023)
+
+
+# In[ ]:
+
+
+np.save("ps_vga_setting_Mats_CL", ps_vga_setting_Mats_CL)
 
 
 # ### Physical Measurement
@@ -850,29 +884,27 @@ np.save("Main_data/tuningValsCL", tuningValsCL)
 # In[ ]:
 
 
-tuningValsCL = np.load("Main_data/tuningValsCL.npy")
-tuningValsCL.shape
+ps_vga_setting_Mats_CL = np.load("ps_vga_setting_Mats_CL.npy")
+ps_vga_setting_Mats_CL.shape
 
 
 # In[ ]:
 
 
-tuningMatricesMCL = []
-for tuningMat in tuningValsCL:
-    psVec = tuningMat[:,:,0].reshape(-1)
-    vgaVec = tuningMat[:,:,1].reshape(-1)
-    physNumsVec = multPhysNumberBank.reshape(-1)
-    exp.setMults(psVec, vgaVec, physNumbsVec)
+TMatricesMCL = []
+for ps_vga_setting_Mat in ps_vga_setting_Mats_CL:
+    (psVals, vgaVals, physNumbers) = SettingsMatrixToVectors(ps_vga_setting_Mat, multPhysNumberBank)
+    exp.setMults(psVals, vgaVals, psVals)
     time.sleep(1)
     m, std = exp.measureSMatrix(delay=2)
-    tuningMatricesM.append(m)
-tuningMatricesMCL = np.array(tuningMatricesMCL)
+    TMatricesMCL.append(m)
+TMatricesMCL = np.array(TMatricesMCL)
 
 
 # In[ ]:
 
 
-np.save("Main_data/tuningMatricesMCL", tuningMatricesMCL)
+np.save("TMatricesMCL", TMatricesMCL)
 
 
 # ### Fake Measurements
@@ -880,20 +912,20 @@ np.save("Main_data/tuningMatricesMCL", tuningMatricesMCL)
 # In[ ]:
 
 
-XF = np.load("Main_data/personalityVector_15072021.npy")
+XOLF = np.load("XOLF.npy")
 
 
 # In[ ]:
 
 
-tuningValsCL = np.load("Main_data/tuningValsCL.npy")
-tuningValsCL.shape
+ps_vga_setting_Mats_CL = np.load("ps_vga_setting_Mats_CL.npy")
+ps_vga_setting_Mats_CL.shape
 
 
 # In[ ]:
 
 
-multBank.setPersonalityVectors(XF)
+multBank.setPersonalityVectors(XOLF)
 
 
 # In[ ]:
@@ -932,25 +964,25 @@ Y0CL = fbCoupBank.getPersonalityVectors()
 # In[ ]:
 
 
-XSet = X0CL*np.random.normal(1, 0.1, size=len(X0CL))
+XCLSet = X0CL*np.random.normal(1, 0.02, size=len(X0CL))
 
 
 # In[ ]:
 
 
-multBank.setPersonalityVectors(XSet)
+multBank.setPersonalityVectors(XCLSet)
 
 
 # In[ ]:
 
 
-YSet = Y0CL*np.random.normal(1, 0.1, size=len(Y0CL))
+YCLSet = Y0CL*np.random.normal(1, 0.1, size=len(Y0CL))
 
 
 # In[ ]:
 
 
-fbCoupBank.setPersonalityVectors(YSet)
+fbCoupBank.setPersonalityVectors(YCLSet)
 
 
 # In[ ]:
@@ -963,26 +995,20 @@ newNet.s[0, 5:, :5]
 # In[ ]:
 
 
-def setMultBank(ps_vga_setting_Mat, multBank):
-    nCols, nRows, _ = ps_vga_setting_Mat.shape
-    for i_out in range(nRows):
-        for i_in in range(nCols):
-            loc = ('M', 'N', i_in, i_out)
-            mult = multBank.getMultByLoc(loc)
-            psVal, vgaVal = ps_vga_setting_Mat[i_out, i_in]
-            mult.setSettings(psVal, vgaVal)
+TMatricesSCL = []
+for ps_vga_setting_Mat in ps_vga_setting_Mats_CL:
+    (psVals, vgaVals, physNumbers) = SettingsMatrixToVectors(ps_vga_setting_Mat, multPhysNumberBank)
+    multBank.setAllMultsArray(psVals, vgaVals, physNumbers)
+    newNet = BuildNewNetworkCL(SplitterBuilder, MultBuilder, FBCouplerBuilder, loc="N", n=5)
+    m = newNet.s[0, 5:, :5]
+    TMatricesSCL.append(m)
+TMatricesSCL = np.array(TMatricesSCL)
 
 
 # In[ ]:
 
 
-tuningMatricesMCL = []
-for ps_vga_setting_Mat in tuningValsCL:
-    setMultBank(ps_vga_setting_Mat, multBank)
-    newNet = BuildNewNetworkCL(SplitterBuilder, MultBuilder, FBCouplerBuilder, loc="N", n=5)
-    m = newNet.s[0, 5:, :5]
-    tuningMatricesMCL.append(m)
-tuningMatricesMCL = np.array(tuningMatricesMCL)
+PlotMatricesListAsGrid(TMatricesSCL, shape=(3, 5, 5, 5), maxRad=0.01)
 
 
 # In[ ]:
@@ -995,8 +1021,8 @@ fbCoupBank.setPersonalityVectors(Y0CL)
 # In[ ]:
 
 
-np.save("Main_data/tuningValsCL", tuningValsCL)
-np.save("Main_data/tuningMatricesMCL", tuningMatricesMCL)
+np.save("ps_vga_setting_Mats_CL", ps_vga_setting_Mats_CL)
+np.save("TMatricesSCL", TMatricesSCL)
 
 
 # ### Fitting
@@ -1004,29 +1030,14 @@ np.save("Main_data/tuningMatricesMCL", tuningMatricesMCL)
 # In[ ]:
 
 
-tuningValsCL = np.load("Main_data/tuningValsCL.npy")
-tuningMatricesMCL = np.load("Main_data/tuningMatricesMCL.npy")
+ps_vga_setting_Mats_CL = np.load("ps_vga_setting_Mats_CL.npy")
+TMatricesCL = np.load("TMatricesSCL.npy")
 
 
 # In[ ]:
 
 
-def PlotTuningMatrices(tuningMatrices, shape, maxRad):
-    """
-    tuningMatrices.shape => (N*M, n, n)
-    shape = (N, M, n, n)
-    """
-    N, M, n, n = shape
-    tuningMatricesNxN = tuningMatrices.reshape(shape)
-    tuningMatricesNxN_List = [[tuningMatricesNxN[r,c] for c in range(M)] for r in range(N)]
-    tuningMatrices2D = np.block(tuningMatricesNxN_List)
-    plotComplexArray(tuningMatrices2D, maxRad=maxRad)
-
-
-# In[ ]:
-
-
-PlotTuningMatrices(tuningMatricesMCL, (3, 5, 5, 5), maxRad=0.01)
+PlotMatricesListAsGrid(TMatricesCL, shape=(3, 5, 5, 5), maxRad=0.01)
 
 
 # The simulation builder `BuildNewNetwork` requires that we supply it with two functions, one which creates an RF network object from of a 5-way splitter, and another which creates one of the Multiplier.  We will assume that the splitter is generic and employ a simple theoretical model for that which was imported from our `NetworkBuilding` theoretical simulation notebook.  However, for the Multiplier, we will use the `MultiplierBank` and the `loc` code to extract the model for a multiplier assigned to that specific location in the network. 
@@ -1070,8 +1081,8 @@ def setMultBank(ps_vga_setting_Mat, multBank):
 # In[ ]:
 
 
-# set the values for the models
-setMultBank(tuningValsCL[0], multBank)
+ps_vga_setting_Mat = ps_vga_setting_Mats_CL[0]
+SetMultBankSettings(ps_vga_setting_Mat, multBank, multLocBank)
 
 
 # In[ ]:
@@ -1088,25 +1099,19 @@ T
 # In[ ]:
 
 
-tuningMatricesSCL = []
-for ps_vga_setting_Mat in tuningValsCL:
-    setMultBank(ps_vga_setting_Mat, multBank)
+TMatricesFCL = []
+for ps_vga_setting_Mat in ps_vga_setting_Mats_CL:
+    SetMultBankSettings(ps_vga_setting_Mat, multBank, multLocBank)
     newNet = BuildNewNetworkCL(SplitterBuilder, MultBuilder, FBCouplerBuilder, loc="N", n=5)
     m = newNet.s[0, 5:, :5]
-    tuningMatricesSCL.append(m)
-tuningMatricesSCL = np.array(tuningMatricesSCL)
+    TMatricesFCL.append(m)
+TMatricesFCL = np.array(TMatricesFCL)
 
 
 # In[ ]:
 
 
-tuningMatricesSCL.shape
-
-
-# In[ ]:
-
-
-PlotTuningMatrices(tuningMatricesSCL, (3, 5, 5, 5), maxRad=0.01)
+PlotMatricesListAsGrid(TMatricesFCL, (3, 5, 5, 5), maxRad=0.01)
 
 
 # Ideally, this would yield the exact same network scattering matrices as were measured and contained in `tuningMatricesM`.  Of course they won't because each physical device has its own personality and other factors such as varying cable lengths.  We will therefore optimize the PCA weights of each device in simulation in an attempt to create collection of devices which match the real behavior of the experimental devices.
@@ -1128,14 +1133,14 @@ def fun(Z):
     Y = Z[(-Y0CL.size):]
     multBank.setPersonalityVectors(X)
     fbCoupBank.setPersonalityVectors(Y)
-    tuningMatricesSCL = []
-    for ps_vga_setting_Mat in tuningValsCL:
+    TMatricesFCL = []
+    for ps_vga_setting_Mat in ps_vga_setting_Mats_CL:
         setMultBank(ps_vga_setting_Mat, multBank)
         newNet = BuildNewNetworkCL(SplitterBuilder, MultBuilder, FBCouplerBuilder, loc="N", n=5)
         m = newNet.s[0, 5:, :5]
-        tuningMatricesSCL.append(m)
-    tuningMatricesSCL = np.array(tuningMatricesSCL)
-    error = np.sum(np.abs(tuningMatricesSCL - tuningMatricesMCL)**2)
+        TMatricesFCL.append(m)
+    TMatricesFCL = np.array(TMatricesFCL)
+    error = np.sum(np.abs(TMatricesFCL - TMatricesCL)**2)
     print(error)
     return error
 
@@ -1144,11 +1149,6 @@ def fun(Z):
 
 
 Z0CL = np.append(X0CL, Y0CL)
-
-
-# In[ ]:
-
-
 fun(Z0CL)
 
 
@@ -1194,26 +1194,32 @@ fbCoupBank.setPersonalityVectors(YFCL)
 # In[ ]:
 
 
-tuningMatricesS = []
-for ps_vga_setting_Mat in tuningValsCL:
+TMatricesFCL = []
+for ps_vga_setting_Mat in ps_vga_setting_Mats_CL:
     setMultBank(ps_vga_setting_Mat, multBank)
     newNet = BuildNewNetworkCL(SplitterBuilder, MultBuilder, FBCouplerBuilder, loc="N", n=5)
     m = newNet.s[0, 5:, :5]
-    tuningMatricesS.append(m)
-tuningMatricesS = np.array(tuningMatricesS)
+    TMatricesFCL.append(m)
+TMatricesFCL = np.array(TMatricesFCL)
 
 
 # In[ ]:
 
 
-PlotTuningMatrices(tuningMatricesS, (3, 5, 5, 5), maxRad=0.01)
+PlotMatricesListAsGrid(TMatricesFCL, (3, 5, 5, 5), maxRad=0.01)
 
 
 # In[ ]:
 
 
-np.save("Main_data/XFCL", XFCL)
-np.save("Main_data/YFCL", YFCL)
+PlotMatricesListAsGrid(TMatricesCL, (3, 5, 5, 5), maxRad=0.01)
+
+
+# In[ ]:
+
+
+np.save("XFCL", XFCL)
+np.save("YFCL", YFCL)
 
 
 # # Set and Measure a Matrix
@@ -1221,42 +1227,51 @@ np.save("Main_data/YFCL", YFCL)
 # In[ ]:
 
 
-def calcNewMatrixSettings(K, multBank, n, warn=True, verbose=False):
-    expK = []
-    for i_out in range(n):
-        expRow = []
-        for i_in in range(n):
-            loc = ('M', 'N', i_in, i_out)
-            mult = multBank.getMultByLoc(loc)
-            T = 5*K[i_out, i_in]
-            mult.setT(T, warn=warn, verbose=verbose)
-            Texp = mult.TExpected
-            expRow.append(Texp)
-        expK.append(expRow)
-    expK = np.array(expK)
-    return (expK/n)
-
-
-# In[ ]:
-
-
-def setExpMultBank(exp, multBank):
-    physNums = multBank.getPhysNums()
-    psSettings = [multBank.getMultByPhysNum(physNum).psSetting for physNum in physNums]
-    vgaSettings = [multBank.getMultByPhysNum(physNum).vgaSetting for physNum in physNums]
-    exp.setMults(psSettings, vgaSettings, physNums)
-
-
-# In[ ]:
-
-
-XF = np.load("Main_data/personalityVector_15072021.npy")
-
-
-# In[ ]:
-
-
+XF = np.load("XFCL.npy")
 multBank.setPersonalityVectors(XF)
+YF = np.load("YFCL.npy")
+fbCoupBank.setPersonalityVectors(YF)
+
+
+# In[ ]:
+
+
+# def calcNewMatrixSettings(K, multBank, n, warn=True, verbose=False):
+#     expK = []
+#     for i_out in range(n):
+#         expRow = []
+#         for i_in in range(n):
+#             loc = ('M', 'N', i_in, i_out)
+#             mult = multBank.getMultByLoc(loc)
+#             T = 5*K[i_out, i_in]
+#             mult.setT(T, warn=warn, verbose=verbose)
+#             Texp = mult.TExpected
+#             expRow.append(Texp)
+#         expK.append(expRow)
+#     expK = np.array(expK)
+#     return (expK/n)
+
+
+# In[ ]:
+
+
+# def setExpMultBank(exp, multBank):
+#     physNums = multBank.getPhysNums()
+#     psSettings = [multBank.getMultByPhysNum(physNum).psSetting for physNum in physNums]
+#     vgaSettings = [multBank.getMultByPhysNum(physNum).vgaSetting for physNum in physNums]
+#     exp.setMults(psSettings, vgaSettings, physNums)
+
+
+# In[ ]:
+
+
+# XF = np.load("Main_data/personalityVector_15072021.npy")
+
+
+# In[ ]:
+
+
+# multBank.setPersonalityVectors(XF)
 
 
 # ## Compare Current System to Tuning Matrices
@@ -1264,8 +1279,9 @@ multBank.setPersonalityVectors(XF)
 # In[ ]:
 
 
-tuningVals = np.load("Main_data/tuningVals25_15072021.npy")
+ps_vga_setting_Mats_CL = np.load("ps_vga_setting_Mats_CL.npy")
 tuningMatricesM = np.load("Main_data/tuningMatricesM25_15072021.npy")
+TMatricesMCL = np.load("TMatricesMCL.npy")
 
 
 # In[ ]:

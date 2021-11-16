@@ -783,11 +783,12 @@ setattr(MultiplierBank, "setAllMults", setAllMults)
 # In[ ]:
 
 
-def setAllMultsArray(self, psVal, vgaVal):
-    for mult in self.getMults():
+def setAllMultsArray(self, psVals, vgaVals, physNumbers):
+    for (psVal, vgaVal, physNumber) in zip(psVals, vgaVals, physNumbers):
+        mult = self.getMultByPhysNum(physNumber)
         mult.setSettings(psVal, vgaVal)
         
-setattr(MultiplierBank, "setAllMults", setAllMults)        
+setattr(MultiplierBank, "setAllMultsArray", setAllMultsArray)        
 
 
 # In[ ]:
