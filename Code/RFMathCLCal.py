@@ -286,7 +286,7 @@ allMultLocs;
 
 # Be careful here.  A horizontal row in the physical world represents a column in matrix multiplication
 multPhysNumberBank = [[31, 32, 33, 34, 35],
-                      [11, 12, 13, 14, 15],
+                      [41, 42, 43, 44, 45],
                       [16, 17, 18, 19, 20],
                       [21, 22, 23, 24, 25],
                       [26, 27, 28, 29, 30]]
@@ -309,7 +309,7 @@ multLocBank
 # In[ ]:
 
 
-inputLine = 5
+inputLine = 2
 outputLine = 1
 multPhysNumberBank[outputLine - 1, inputLine - 1]
 
@@ -358,7 +358,7 @@ for loc in allFBCLocs:
 # In[ ]:
 
 
-fbCoupBank.getPersonalityVectors()
+Y0 = fbCoupBank.getPersonalityVectors()
 
 
 # ## Tuning (Open Loop)
@@ -430,9 +430,9 @@ print(abs(coupler1[:,0]),abs(coupler2[:,0]),abs(coupler3[:,0]),abs(coupler4[:,0]
 # In[ ]:
 
 
-outIndex = 1
+outIndex = 5
 inIndex = 5
-vga, ps = (1000, 1000)
+vga, ps = (100, 1000)
 loc = ('M', 'N', inIndex-1, outIndex-1) # ('M', 'N', in, out) :(.
 mult = multBank.getMultByLoc(loc)
 physNum = mult.physNumber
@@ -514,8 +514,8 @@ np.abs(SMat)
 # In[ ]:
 
 
-psVals = np.linspace(0, 1023, 12, dtype="int")
-vgaVals = np.linspace(0, 1023, 12, dtype="int")
+psVals = np.linspace(0, 1023, 10, dtype="int")
+vgaVals = np.linspace(0, 1023, 10, dtype="int")
 
 
 # In[ ]:
@@ -530,8 +530,8 @@ ps_vga_setting_Mats_OL = np.array(ps_vga_setting_Mats_OL)
 
 ps_settings = ps_vga_setting_Mats_OL[:,:,:,0]
 vga_settings = ps_vga_setting_Mats_OL[:,:,:,1]
-PlotMatricesListAsGrid(ps_settings, shape=(12, 12, 5, 5), maxRad=1023)
-PlotMatricesListAsGrid(vga_settings, shape=(12, 12, 5, 5), maxRad=1023)
+PlotMatricesListAsGrid(ps_settings, shape=(10, 10, 5, 5), maxRad=1023)
+PlotMatricesListAsGrid(vga_settings, shape=(10, 10, 5, 5), maxRad=1023)
 
 
 # ### Physical Measurement
@@ -559,7 +559,7 @@ PlotMatricesListAsGrid(vga_settings, shape=(12, 12, 5, 5), maxRad=1023)
 TMatricesMOL = []
 for ps_vga_setting_Mat in ps_vga_setting_Mats_OL:
     (psVals, vgaVals, physNumbers) = SettingsMatrixToVectors(ps_vga_setting_Mat, multPhysNumberBank)
-    exp.setMults(psVals, vgaVals, psVals)
+    exp.setMults(psVals, vgaVals, physNumbers)
     time.sleep(1)
     m, std = exp.measureSMatrix(delay=2)
     TMatricesMOL.append(m)
@@ -569,8 +569,17 @@ TMatricesMOL = np.array(TMatricesMOL)
 # In[ ]:
 
 
-np.save("Main_data/tuningVals25_15072021", ps_vga_setting_Mats_OL)
-np.save("Main_data/tuningMatricesM25_15072021", TMatricesMOL)
+# for ps_vga_setting_Mat in ps_vga_setting_Mats_OL:
+#     (psVals, vgaVals, physNumbers) = SettingsMatrixToVectors(ps_vga_setting_Mat, multPhysNumberBank)
+#     print((psVals, vgaVals, physNumbers))
+#     print()
+
+
+# In[ ]:
+
+
+np.save("Main_data/new/ps_vga_setting_Mats_OL_11_18_2021", ps_vga_setting_Mats_OL)
+np.save("Main_data/new/TMatricesMOL_11_18_2021", TMatricesMOL)
 
 
 # ### Fake Measurements
@@ -662,14 +671,14 @@ XCur = multBank.getPersonalityVectors()
 # In[ ]:
 
 
-ps_vga_setting_Mats_OL = np.load("ps_vga_setting_Mats_OL.npy")
-TMatricesOL = np.load("TMatricesSOL.npy")  # Change this from "TMatricesSOL.npy" to "TMatricesMOL.npy" as measured data is available.
+ps_vga_setting_Mats_OL = np.load("Main_data/new/ps_vga_setting_Mats_OL_11_18_2021.npy")
+TMatricesOL = np.load("Main_data/new/TMatricesMOL_11_18_2021.npy")  # Change this from "TMatricesSOL.npy" to "TMatricesMOL.npy" as measured data is available.
 
 
 # In[ ]:
 
 
-PlotMatricesListAsGrid(TMatricesOL, (12, 12, 5, 5), maxRad=1.5)
+PlotMatricesListAsGrid(TMatricesOL, (10, 10, 5, 5), maxRad=1.5)
 
 
 # The simulation builder `BuildNewNetwork` requires that we supply it with two functions, one which creates an RF network object from of a 5-way splitter, and another which creates one of the Multiplier.  We will assume that the splitter is generic and employ a simple theoretical model for that which was imported from our `NetworkBuilding` theoretical simulation notebook.  However, for the Multiplier, we will use the `MultiplierBank` and the `loc` code to extract the model for a multiplier assigned to that specific location in the network. 
@@ -724,18 +733,19 @@ TMatricesFOL = np.array(TMatricesFOL)
 # In[ ]:
 
 
-PlotMatricesListAsGrid(TMatricesFOL, (12, 12, 5, 5), maxRad=1.5)
+PlotMatricesListAsGrid(TMatricesFOL, (10, 10, 5, 5), maxRad=1.5)
 
 
 # In[ ]:
 
 
-PlotMatricesListAsGrid(TMatricesOL/TMatricesFOL,(12, 12, 5, 5), maxRad=0.5)
+PlotMatricesListAsGrid(TMatricesOL/TMatricesFOL,(10, 10, 5, 5), maxRad=0.5)
 
 
 # In[ ]:
 
 
+XOL0=X0
 grossCorrFact = np.mean(TMatricesOL/TMatricesFOL)
 print(grossCorrFact)
 XOL1 = (grossCorrFact*XCur.view('complex')).view('float')
@@ -760,8 +770,9 @@ def fun(X):
         m = newNet.s[0, 5:, :5]
         TMatricesFOL.append(m)
     TMatricesFOL = np.array(TMatricesFOL)
-    error = np.sum(np.abs(TMatricesFOL - TMatricesOL)**2)
-    print(error)
+    errorNorm = np.sum(np.abs(TMatricesOL)**2)    
+    error = np.sum(np.abs(TMatricesFOL - TMatricesOL)**2)/errorNorm
+    print(error, end='\r')
     return error
 
 
@@ -828,13 +839,13 @@ TMatricesFOL = np.array(TMatricesFOL)
 # In[ ]:
 
 
-PlotMatricesListAsGrid(TMatricesFOL, (12, 12, 5, 5), maxRad=1.5)
+PlotMatricesListAsGrid(TMatricesFOL, (10, 10, 5, 5), maxRad=1.5)
 
 
 # In[ ]:
 
 
-np.save("XOLF", XOLF)
+np.save("Main_data/new/XOLF_11_18_2021", XOLF)
 
 
 # ## Tuning Closed Loop
@@ -844,7 +855,7 @@ np.save("XOLF", XOLF)
 # In[ ]:
 
 
-XOLF = np.load("XOLF.npy")
+XOLF = np.load("Main_data/new/XOLF_11_18_2021.npy")
 
 
 # In[ ]:
@@ -857,11 +868,12 @@ multBank.setPersonalityVectors(XOLF)
 
 
 ps_vga_setting_Mats_CL = []
-for _ in range(15):
+for _ in range(100):
     K = RescaleToUnitary(RandomComplexNaiveMatrix(0.3, (5,5)), 0.9)
     SetMultBankT(K, multBank, multLocBank)
     ps_vga_setting_Mat = GetMultBankSettings((5,5), multBank, multLocBank)
     ps_vga_setting_Mats_CL.append(ps_vga_setting_Mat)
+ps_vga_setting_Mats_CL = np.array(ps_vga_setting_Mats_CL)
 
 
 # In[ ]:
@@ -869,14 +881,14 @@ for _ in range(15):
 
 ps_settings = ps_vga_setting_Mats_CL[:,:,:,0]
 vga_settings = ps_vga_setting_Mats_CL[:,:,:,1]
-PlotMatricesListAsGrid(ps_settings, shape=(3, 5, 5, 5), maxRad=1023)
-PlotMatricesListAsGrid(vga_settings, shape=(3, 5, 5, 5), maxRad=1023)
+PlotMatricesListAsGrid(ps_settings, shape=(10, 10, 5, 5), maxRad=1023)
+PlotMatricesListAsGrid(vga_settings, shape=(10, 10, 5, 5), maxRad=1023)
 
 
 # In[ ]:
 
 
-np.save("ps_vga_setting_Mats_CL", ps_vga_setting_Mats_CL)
+np.save("Main_data/new/ps_vga_setting_Mats_CL_11_19_2021", ps_vga_setting_Mats_CL)
 
 
 # ### Physical Measurement
@@ -884,7 +896,7 @@ np.save("ps_vga_setting_Mats_CL", ps_vga_setting_Mats_CL)
 # In[ ]:
 
 
-ps_vga_setting_Mats_CL = np.load("ps_vga_setting_Mats_CL.npy")
+ps_vga_setting_Mats_CL = np.load("Main_data/new/ps_vga_setting_Mats_CL_11_19_2021.npy")
 ps_vga_setting_Mats_CL.shape
 
 
@@ -894,7 +906,7 @@ ps_vga_setting_Mats_CL.shape
 TMatricesMCL = []
 for ps_vga_setting_Mat in ps_vga_setting_Mats_CL:
     (psVals, vgaVals, physNumbers) = SettingsMatrixToVectors(ps_vga_setting_Mat, multPhysNumberBank)
-    exp.setMults(psVals, vgaVals, psVals)
+    exp.setMults(psVals, vgaVals, physNumbers)
     time.sleep(1)
     m, std = exp.measureSMatrix(delay=2)
     TMatricesMCL.append(m)
@@ -904,7 +916,7 @@ TMatricesMCL = np.array(TMatricesMCL)
 # In[ ]:
 
 
-np.save("TMatricesMCL", TMatricesMCL)
+np.save("Main_data/new/TMatricesMCL_11_19_2021", TMatricesMCL)
 
 
 # ### Fake Measurements
@@ -958,7 +970,7 @@ X0CL = multBank.getPersonalityVectors()
 # In[ ]:
 
 
-Y0CL = fbCoupBank.getPersonalityVectors()
+Y0CL = Y0.copy()
 
 
 # In[ ]:
@@ -1030,14 +1042,23 @@ np.save("TMatricesSCL", TMatricesSCL)
 # In[ ]:
 
 
-ps_vga_setting_Mats_CL = np.load("ps_vga_setting_Mats_CL.npy")
-TMatricesCL = np.load("TMatricesSCL.npy")
+ps_vga_setting_Mats_CL = np.load("Main_data/new/ps_vga_setting_Mats_CL_11_19_2021.npy")
+TMatricesCL = np.load("Main_data/new/TMatricesMCL_11_19_2021.npy")
+X0CL = np.load("Main_data/new/XOLF_11_18_2021.npy")
+Y0CL = Y0.copy()
 
 
 # In[ ]:
 
 
-PlotMatricesListAsGrid(TMatricesCL, shape=(3, 5, 5, 5), maxRad=0.01)
+multBank.setPersonalityVectors(X0CL)
+fbCoupBank.setPersonalityVectors(Y0CL)
+
+
+# In[ ]:
+
+
+PlotMatricesListAsGrid(TMatricesCL, shape=(10, 10, 5, 5), maxRad=0.001)
 
 
 # The simulation builder `BuildNewNetwork` requires that we supply it with two functions, one which creates an RF network object from of a 5-way splitter, and another which creates one of the Multiplier.  We will assume that the splitter is generic and employ a simple theoretical model for that which was imported from our `NetworkBuilding` theoretical simulation notebook.  However, for the Multiplier, we will use the `MultiplierBank` and the `loc` code to extract the model for a multiplier assigned to that specific location in the network. 
@@ -1066,14 +1087,14 @@ def FBCouplerBuilder(loc):
 # In[ ]:
 
 
-def setMultBank(ps_vga_setting_Mat, multBank):
-    nCols, nRows, _ = ps_vga_setting_Mat.shape
-    for i_out in range(nRows):
-        for i_in in range(nCols):
-            loc = ('M', 'N', i_in, i_out)
-            mult = multBank.getMultByLoc(loc)
-            psVal, vgaVal = ps_vga_setting_Mat[i_out, i_in]
-            mult.setSettings(psVal, vgaVal)
+# def setMultBank(ps_vga_setting_Mat, multBank):
+#     nCols, nRows, _ = ps_vga_setting_Mat.shape
+#     for i_out in range(nRows):
+#         for i_in in range(nCols):
+#             loc = ('M', 'N', i_in, i_out)
+#             mult = multBank.getMultByLoc(loc)
+#             psVal, vgaVal = ps_vga_setting_Mat[i_out, i_in]
+#             mult.setSettings(psVal, vgaVal)
 
 
 # As a quick example of a simulation, we set all the multipliers to the same setting, build a network, and examine the transmissive properties of it.
@@ -1111,7 +1132,7 @@ TMatricesFCL = np.array(TMatricesFCL)
 # In[ ]:
 
 
-PlotMatricesListAsGrid(TMatricesFCL, (3, 5, 5, 5), maxRad=0.01)
+PlotMatricesListAsGrid(TMatricesFCL, (10, 10, 5, 5), maxRad=0.001)
 
 
 # Ideally, this would yield the exact same network scattering matrices as were measured and contained in `tuningMatricesM`.  Of course they won't because each physical device has its own personality and other factors such as varying cable lengths.  We will therefore optimize the PCA weights of each device in simulation in an attempt to create collection of devices which match the real behavior of the experimental devices.
@@ -1135,13 +1156,15 @@ def fun(Z):
     fbCoupBank.setPersonalityVectors(Y)
     TMatricesFCL = []
     for ps_vga_setting_Mat in ps_vga_setting_Mats_CL:
-        setMultBank(ps_vga_setting_Mat, multBank)
+        # setMultBank(ps_vga_setting_Mat, multBank)
+        SetMultBankSettings(ps_vga_setting_Mat, multBank, multLocBank)        
         newNet = BuildNewNetworkCL(SplitterBuilder, MultBuilder, FBCouplerBuilder, loc="N", n=5)
         m = newNet.s[0, 5:, :5]
         TMatricesFCL.append(m)
     TMatricesFCL = np.array(TMatricesFCL)
-    error = np.sum(np.abs(TMatricesFCL - TMatricesCL)**2)
-    print(error)
+    errorNorm = np.sum(np.abs(TMatricesCL)**2)
+    error = np.sum(np.abs(TMatricesFCL - TMatricesCL)**2)/errorNorm
+    print(error, end='\r')
     return error
 
 
@@ -1196,7 +1219,8 @@ fbCoupBank.setPersonalityVectors(YFCL)
 
 TMatricesFCL = []
 for ps_vga_setting_Mat in ps_vga_setting_Mats_CL:
-    setMultBank(ps_vga_setting_Mat, multBank)
+    (psVals, vgaVals, physNumbers) = SettingsMatrixToVectors(ps_vga_setting_Mat, multPhysNumberBank)
+    multBank.setAllMultsArray(psVals, vgaVals, physNumbers)
     newNet = BuildNewNetworkCL(SplitterBuilder, MultBuilder, FBCouplerBuilder, loc="N", n=5)
     m = newNet.s[0, 5:, :5]
     TMatricesFCL.append(m)
@@ -1206,20 +1230,20 @@ TMatricesFCL = np.array(TMatricesFCL)
 # In[ ]:
 
 
-PlotMatricesListAsGrid(TMatricesFCL, (3, 5, 5, 5), maxRad=0.01)
+PlotMatricesListAsGrid(TMatricesFCL, (10, 10, 5, 5), maxRad=0.001)
 
 
 # In[ ]:
 
 
-PlotMatricesListAsGrid(TMatricesCL, (3, 5, 5, 5), maxRad=0.01)
+PlotMatricesListAsGrid(TMatricesCL, (10, 10, 5, 5), maxRad=0.001)
 
 
 # In[ ]:
 
 
-np.save("XFCL", XFCL)
-np.save("YFCL", YFCL)
+np.save("Main_data/new/XFCL_11_19_2021", XFCL)
+np.save("Main_data/new/YFCL_11_19_2021", YFCL)
 
 
 # # Set and Measure a Matrix
