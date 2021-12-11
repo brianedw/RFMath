@@ -361,6 +361,12 @@ for loc in allFBCLocs:
 Y0 = fbCoupBank.getPersonalityVectors()
 
 
+# In[ ]:
+
+
+Y0
+
+
 # ## Tuning (Open Loop)
 
 # ### Debugging
@@ -916,7 +922,7 @@ TMatricesMCL = np.array(TMatricesMCL)
 # In[ ]:
 
 
-np.save("Main_data/new/TMatricesMCL_11_19_2021", TMatricesMCL)
+# np.save("Main_data/new/TMatricesMCL_11_19_2021", TMatricesMCL)
 
 
 # ### Fake Measurements
@@ -1044,7 +1050,7 @@ np.save("TMatricesSCL", TMatricesSCL)
 
 ps_vga_setting_Mats_CL = np.load("Main_data/new/ps_vga_setting_Mats_CL_11_19_2021.npy")
 TMatricesCL = np.load("Main_data/new/TMatricesMCL_11_19_2021.npy")
-X0CL = np.load("Main_data/new/XOLF_11_18_2021.npy")
+X0CL = np.load("Main_data/new/XFOL_11_18_2021.npy")
 Y0CL = Y0.copy()
 
 
@@ -1132,7 +1138,7 @@ TMatricesFCL = np.array(TMatricesFCL)
 # In[ ]:
 
 
-PlotMatricesListAsGrid(TMatricesFCL, (10, 10, 5, 5), maxRad=0.001)
+PlotMatricesListAsGrid(TMatricesFCL, (10, 10, 5, 5), maxRad=0.01)
 
 
 # Ideally, this would yield the exact same network scattering matrices as were measured and contained in `tuningMatricesM`.  Of course they won't because each physical device has its own personality and other factors such as varying cable lengths.  We will therefore optimize the PCA weights of each device in simulation in an attempt to create collection of devices which match the real behavior of the experimental devices.
@@ -1144,6 +1150,96 @@ PlotMatricesListAsGrid(TMatricesFCL, (10, 10, 5, 5), maxRad=0.001)
 
 
 print(X0CL.size, Y0CL.size)
+
+
+# We can see that the results are consistently off by about the same value (i.e. 6.05 + 2.2j)
+
+# In[ ]:
+
+
+FvsMRatio = TMatricesFCL/TMatricesCL
+print(FvsMRatio[0])
+print(np.mean(FvsMRatio))
+print(np.std(FvsMRatio))
+
+
+# In[ ]:
+
+
+def fun(y):
+    Y = np.tile(y, 5)
+    fbCoupBank.setPersonalityVectors(Y)
+    TMatricesFCL = []
+    for ps_vga_setting_Mat in ps_vga_setting_Mats_CL:
+        # setMultBank(ps_vga_setting_Mat, multBank)
+        SetMultBankSettings(ps_vga_setting_Mat, multBank, multLocBank)        
+        newNet = BuildNewNetworkCL(SplitterBuilder, MultBuilder, FBCouplerBuilder, loc="N", n=5)
+        m = newNet.s[0, 5:, :5]
+        TMatricesFCL.append(m)
+    TMatricesFCL = np.array(TMatricesFCL)
+    errorNorm = np.sum(np.abs(TMatricesCL)**2)
+    error = np.sum(np.abs(TMatricesFCL - TMatricesCL)**2)/errorNorm
+    print(error, end='\r')
+    return error
+
+
+# In[ ]:
+
+
+y0CL = Y0CL[:8]
+y0CL
+
+
+# In[ ]:
+
+
+fit = sp.optimize.minimize(fun, y0CL, method='Powell', 
+                           options={'disp':True, 'adaptive':True, 'fatol':0.01})
+
+
+# In[ ]:
+
+
+Y1CL = np.tile(fit.x, 5)
+
+
+# In[ ]:
+
+
+def fun(Y):
+    fbCoupBank.setPersonalityVectors(Y)
+    TMatricesFCL = []
+    for ps_vga_setting_Mat in ps_vga_setting_Mats_CL:
+        # setMultBank(ps_vga_setting_Mat, multBank)
+        SetMultBankSettings(ps_vga_setting_Mat, multBank, multLocBank)        
+        newNet = BuildNewNetworkCL(SplitterBuilder, MultBuilder, FBCouplerBuilder, loc="N", n=5)
+        m = newNet.s[0, 5:, :5]
+        TMatricesFCL.append(m)
+    TMatricesFCL = np.array(TMatricesFCL)
+    errorNorm = np.sum(np.abs(TMatricesCL)**2)
+    error = np.sum(np.abs(TMatricesFCL - TMatricesCL)**2)/errorNorm
+    print(error, end='\r')
+    return error
+
+
+# In[ ]:
+
+
+fit = sp.optimize.minimize(fun, Y1CL, method='Powell', 
+                           options={'disp':True, 'adaptive':True, 'fatol':0.01})
+
+
+# In[ ]:
+
+
+Y2CL = fit.x
+Y2CL
+
+
+# In[ ]:
+
+
+np.split(Y2CL, 5)
 
 
 # In[ ]:
@@ -1171,22 +1267,22 @@ def fun(Z):
 # In[ ]:
 
 
-Z0CL = np.append(X0CL, Y0CL)
-fun(Z0CL)
+# Z0CL = np.append(X0CL, Y1CL)
+# fun(Z0CL)
 
 
 # In[ ]:
 
 
-fit = sp.optimize.minimize(fun, Z0CL, method='Powell', 
-                           options={'disp':True, 'adaptive':True, 'fatol':0.01})
+# fit = sp.optimize.minimize(fun, Z0CL, method='Powell', 
+#                            options={'disp':True, 'adaptive':True, 'fatol':0.01})
 
 
 # In[ ]:
 
 
-XFCL = multBank.getPersonalityVectors()
-YFCL = fbCoupBank.getPersonalityVectors()
+# XFCL = multBank.getPersonalityVectors()
+# YFCL = fbCoupBank.getPersonalityVectors()
 
 
 # In[ ]:
@@ -1204,14 +1300,14 @@ YFCL = fbCoupBank.getPersonalityVectors()
 # In[ ]:
 
 
-fun(np.append(XFCL, YFCL))
+fun(np.append(X0CL, Y2CL))
 
 
 # In[ ]:
 
 
-multBank.setPersonalityVectors(XFCL)
-fbCoupBank.setPersonalityVectors(YFCL)
+multBank.setPersonalityVectors(X0CL)
+fbCoupBank.setPersonalityVectors(Y2CL)
 
 
 # In[ ]:
@@ -1242,8 +1338,15 @@ PlotMatricesListAsGrid(TMatricesCL, (10, 10, 5, 5), maxRad=0.001)
 # In[ ]:
 
 
-np.save("Main_data/new/XFCL_11_19_2021", XFCL)
-np.save("Main_data/new/YFCL_11_19_2021", YFCL)
+XFCL = X0CL.copy()
+YFCL = Y2CL.copy()
+
+
+# In[ ]:
+
+
+# np.save("Main_data/new/XFCL_12_11_2021", XFCL)
+# np.save("Main_data/new/YFCL_12_11_2021", YFCL)
 
 
 # # Set and Measure a Matrix
@@ -1251,39 +1354,39 @@ np.save("Main_data/new/YFCL_11_19_2021", YFCL)
 # In[ ]:
 
 
-XF = np.load("XFCL.npy")
+XF = np.load("Main_data/new/XFCL_12_11_2021.npy")
 multBank.setPersonalityVectors(XF)
-YF = np.load("YFCL.npy")
+YF = np.load("Main_data/new/YFCL_12_11_2021.npy")
 fbCoupBank.setPersonalityVectors(YF)
 
 
 # In[ ]:
 
 
-# def calcNewMatrixSettings(K, multBank, n, warn=True, verbose=False):
-#     expK = []
-#     for i_out in range(n):
-#         expRow = []
-#         for i_in in range(n):
-#             loc = ('M', 'N', i_in, i_out)
-#             mult = multBank.getMultByLoc(loc)
-#             T = 5*K[i_out, i_in]
-#             mult.setT(T, warn=warn, verbose=verbose)
-#             Texp = mult.TExpected
-#             expRow.append(Texp)
-#         expK.append(expRow)
-#     expK = np.array(expK)
-#     return (expK/n)
+def calcNewMatrixSettings(K, multBank, n, warn=True, verbose=False):
+    expK = []
+    for i_out in range(n):
+        expRow = []
+        for i_in in range(n):
+            loc = ('M', 'N', i_in, i_out)
+            mult = multBank.getMultByLoc(loc)
+            T = 5*K[i_out, i_in]
+            mult.setT(T, warn=warn, verbose=verbose)
+            Texp = mult.TExpected
+            expRow.append(Texp)
+        expK.append(expRow)
+    expK = np.array(expK)
+    return (expK/n)
 
 
 # In[ ]:
 
 
-# def setExpMultBank(exp, multBank):
-#     physNums = multBank.getPhysNums()
-#     psSettings = [multBank.getMultByPhysNum(physNum).psSetting for physNum in physNums]
-#     vgaSettings = [multBank.getMultByPhysNum(physNum).vgaSetting for physNum in physNums]
-#     exp.setMults(psSettings, vgaSettings, physNums)
+def setExpMultBank(exp, multBank):
+    physNums = multBank.getPhysNums()
+    psSettings = [multBank.getMultByPhysNum(physNum).psSetting for physNum in physNums]
+    vgaSettings = [multBank.getMultByPhysNum(physNum).vgaSetting for physNum in physNums]
+    exp.setMults(psSettings, vgaSettings, physNums)
 
 
 # In[ ]:

@@ -314,10 +314,10 @@ def BuildFBCoupler(aIn_aOut_bIn_bOut, freq, loc=()):
     vna input  3 -> >- 4  vna output
      fb input  1 ->>>- 2  fb output
 
-    aOut: 3 -> 4 : Undesired VNA to VNA coupling
     aIn:  1 -> 2 : Large Thru Coupling
-    bOut: 1 -> 4 : Coupling from Loop to VNA Receive Port
+    aOut: 3 -> 4 : Undesired VNA to VNA coupling
     bIn:  3 -> 2 : Coupling from VNA Input Port to Loop
+    bOut: 1 -> 4 : Coupling from Loop to VNA Receive Port
     """
     aIn, aOut, bIn, bOut = aIn_aOut_bIn_bOut
     Z_0 = 50.
@@ -1119,7 +1119,7 @@ def BuildNewNetworkCL(Splitter5WayBuilder, MultBuilder, FBCouplerBuilder, loc=()
     "egress splitters"
     outSplitters = [Splitter5WayBuilder(("So", loc, i)) for i in range(0, n)]
     "fbCouplers"
-    fbCouplers = [FBCouplerBuilder(("fb", loc, i)) for i in range(0,n)]    
+    fbCouplers = [FBCouplerBuilder(("fb", loc, i)) for i in range(0, n)]    
     """
     vna input  3 -> >- 4  vna output
      fb input  1 ->>>- 2  fb output    
